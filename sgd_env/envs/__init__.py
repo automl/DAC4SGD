@@ -1,1 +1,1 @@
-from sgd.envs.sgd_env import SGDEnv
+from sgd_env.envs.sgd_env import SGDEnv
