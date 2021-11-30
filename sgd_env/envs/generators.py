@@ -7,11 +7,13 @@ from torchvision import datasets, transforms
 import numpy as np
 
 
-OptimizerType = nn.Module
+Epochs = int
+Model = nn.Module
+OptimizerParams = nn.Module
 LossType = nn.Module
 
 DataIterator = Iterator[Tuple[torch.Tensor, torch.Tensor]]
-InstanceGenerator = Iterator[Tuple[nn.Module, OptimizerType, LossType, DataIterator, int]]
+InstanceGenerator = Iterator[Tuple[Model, OptimizerParams, LossType, DataIterator, Epochs]]
 InstanceGeneratorFunc = Callable[[torch.Generator, ...], InstanceGenerator]
 
 
@@ -44,7 +46,7 @@ def random_mnist_model(rng, **kwargs):
             self.f = random_feature_extractor(rng)
             n_features = torch.prod(torch.tensor(self.f(torch.rand((1, 1, 28,
                 28), generator=rng)).shape))
-            size = torch.randint(low=16, high=129, size=())
+            size = torch.randint(low=16, high=129, size=(), generator=rng)
             self.fc1 = nn.Linear(n_features, size)
             self.fc2 = nn.Linear(size, 10)
 
@@ -73,26 +75,30 @@ def random_mnist_loader(rng, **kwargs):
                          transform=transform)
       train_loader = torch.utils.data.DataLoader(dataset1,**train_kwargs)
       test_loader = torch.utils.data.DataLoader(dataset2, **test_kwargs)
-      return iter(train_loader), iter(test_loader)
+      return iter(train_loader), test_loader
+
+
+def random_optimizer_parameters(rng, **kwargs):
+    lr_low = np.log(kwargs['learning_rate_range'][0])
+    lr_high = np.log(kwargs['learning_rate_range'][1])
+    log_lr = (lr_low - lr_high) * torch.rand((), generator=rng) + lr_high
+    return {'lr': np.exp(log_lr)}
 
 
 def random_mnist_instance(rng, **kwargs):
     model = random_mnist_model(rng, **kwargs)
     loaders = random_mnist_loader(rng, **kwargs)
-    loss = nn.NLLLoss()
+    optimizer_params = random_optimizer_parameters(rng, **kwargs)
+    loss = F.nll_loss
     epoch_low = kwargs['epoch_range'][0]
     epoch_high = kwargs['epoch_range'][1]
     epochs = torch.randint(low=epoch_low, high=epoch_high, size=(), generator=rng)
-    lr_low = np.log(kwargs['learning_rate_range'][0])
-    lr_high = np.log(kwargs['learning_rate_range'][1])
-    log_lr = (lr_low - lr_high) * torch.rand((), generator=rng) + lr_high
-    optimizer = kwargs['optimizer'](model.parameters(), lr=np.exp(log_lr))
-    return model, optimizer, loss, loaders, epochs
+    return model, optimizer_params, loss, loaders, epochs
 
 
 def random_instance_generator(rng, **kwargs):
     print(kwargs)
-    datasets = kwargs['datasets']
+    datasets = ['MNIST']
     while True:
         idx = torch.randint(high=len(datasets), size=(), generator=rng)
         dataset = datasets[idx.item()]
