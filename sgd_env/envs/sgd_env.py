@@ -5,6 +5,7 @@ from gym import utils
 import operator
 import functools
 import random
+import inspect
 
 import numpy as np
 import torch
@@ -17,7 +18,6 @@ from .config import default_config
 
 
 # TODO: GPU Support
-# TODO: Configurable controllable parameters
 
 MAX_SEED = 4025501053080439804
 
@@ -28,6 +28,19 @@ class SGDEnv(gym.Env, utils.EzPickle):
         self.g = torch.Generator(device='cpu')
         self.instance_gen = self._create_instance_generator(**self.config.generator)
 
+        actions = {}
+        sig = inspect.signature(self.config.optimizer.optimizer)
+        for name in self.config.dac.control:
+            if name in sig.parameters:
+                value = sig.parameters[name]
+                if isinstance(value, bool):
+                    action = spaces.Binary()
+                else:
+                    action = spaces.Box(low=-np.inf, high=np.inf, shape=(1,))
+                actions[name] = action
+        self.action_space = spaces.Dict(actions)
+
+
     def _create_instance_generator(self, generator_func, **kwargs):
         return generator_func(self.g, **kwargs)
 
@@ -36,7 +49,9 @@ class SGDEnv(gym.Env, utils.EzPickle):
 
     def step(self, action):
         for g in self.optimizer.param_groups:
-            g['lr'] = action
+            g['lr'] = action['lr']
+        default_rng_state = torch.get_rng_state()
+        torch.set_rng_state(self.env_rng_state)
         loss = self.epoch()
         self.optimizer.zero_grad()
         loss.backward()
@@ -44,11 +59,14 @@ class SGDEnv(gym.Env, utils.EzPickle):
         self._step += 1
         done = self._step >= self.epochs
         # test_loss = self.test()
+        self.env_rng_state = torch.get_rng_state()
+        torch.set_rng_state(default_rng_state)
         return 1, -loss.item(), done, {}
 
     def reset(self):
         self._step = 0
 
+        default_rng_state = torch.get_rng_state()
         seed = torch.randint(0, MAX_SEED, (), generator=self.g)
         torch.manual_seed(seed)
         torch.cuda.manual_seed(seed)
@@ -61,6 +79,8 @@ class SGDEnv(gym.Env, utils.EzPickle):
             **self.config.optimizer,
             **optimizer_params,
             params=self.model.parameters())
+        self.env_rng_state = torch.get_rng_state()
+        torch.set_rng_state(default_rng_state)
 
     def seed(self, seed=None):
         self.np_random, seed = seeding.np_random(seed)

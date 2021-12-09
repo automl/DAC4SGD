@@ -9,6 +9,12 @@ from .generators import InstanceGeneratorFunc, random_instance_generator
 
 default_config = Config()
 
+
+@default_config('dac')
+class DACConfig:
+    control: List[str] = field(default_factory=lambda: ['lr'])
+
+
 @default_config('optimizer')
 class OptimizerConfig:
     optimizer: Type[torch.optim.Optimizer] = torch.optim.AdamW
