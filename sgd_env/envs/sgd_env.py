@@ -1,11 +1,13 @@
-import gym
-from gym import error, spaces, utils
-from gym.utils import seeding
-from gym import utils
 import operator
 import functools
 import random
 import inspect
+from typing import Optional, Union, Iterator
+
+import gym
+from gym import error, spaces, utils
+from gym.utils import seeding
+from gym import utils
 
 import numpy as np
 import torch
@@ -18,8 +20,26 @@ from .config import default_config
 
 
 # TODO: GPU Support
+# TODO: Convert torch.random to np.RandomState for instance selection
+# TODO: Implement instance selection to reset (Generator or int)
+# TODO: Custom action {'name': 'reset', 'type': spaces.Binary, 'func': func}
+#       func(optimizer, actions) -> None change optimizer state directly
+# TODO: Change default architecture generator to have fixed depth, structure
+
 
 MAX_SEED = 4025501053080439804
+NP_MAX_SEED = 4294967295
+
+
+def random_states(rng, n):
+    default_state = np.random.get_state()
+    states = []
+    for _ in range(n):
+        np.random.seed(rng.randint(1, NP_MAX_SEED))
+        state = np.random.get_state()
+        states.append(state)
+    np.random.set_state(default_state)
+    return states
 
 
 class SGDEnv(gym.Env, utils.EzPickle):
@@ -39,6 +59,7 @@ class SGDEnv(gym.Env, utils.EzPickle):
                     action = spaces.Box(low=-np.inf, high=np.inf, shape=(1,))
                 actions[name] = action
         self.action_space = spaces.Dict(actions)
+        self.instance_random_states = []
 
 
     def _create_instance_generator(self, generator_func, **kwargs):
@@ -63,8 +84,11 @@ class SGDEnv(gym.Env, utils.EzPickle):
         torch.set_rng_state(default_rng_state)
         return 1, -loss.item(), done, {}
 
-    def reset(self):
+    def reset(self, instance: Optional[Union[int, Iterator[int]]] = None):
         self._step = 0
+        if len(self.instance_random_states) == 0:
+            rng = np.random.default_rng()
+            self.instance_random_states = random_states(rng, self.config.dac.n_instances)
 
         default_rng_state = torch.get_rng_state()
         seed = torch.randint(0, MAX_SEED, (), generator=self.g)
@@ -88,6 +112,7 @@ class SGDEnv(gym.Env, utils.EzPickle):
             self.g.manual_seed(seed)
             torch.backends.cudnn.benchmark = False
             torch.backends.cudnn.deterministic = True
+        self.instance_random_states = random_states(self.np_random, self.config.dac.n_instances)
         return [seed]
 
     def epoch(self):

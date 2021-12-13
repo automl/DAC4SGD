@@ -13,6 +13,7 @@ default_config = Config()
 @default_config('dac')
 class DACConfig:
     control: List[str] = field(default_factory=lambda: ['lr'])
+    n_instances: int = 100
 
 
 @default_config('optimizer')
