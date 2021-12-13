@@ -18,23 +18,21 @@ InstanceGeneratorFunc = Callable[[torch.Generator, ...], InstanceGenerator]
 
 
 def random_feature_extractor(rng, **kwargs):
-    n_layers = torch.randint(low=2, high=5, size=(), generator=rng)
-    use_dropout = torch.randint(high=2, size=(), generator=rng)
-    use_pooling = torch.randint(high=2, size=(), generator=rng)
+    n_layers = rng.randint(low=2, high=5)
+    use_dropout = rng.randint(low=0, high=2)
+    use_pooling = rng.randint(low=0, high=2)
     in_size = 1
     layers = []
     for i in range(n_layers):
-        out_size = torch.randint(low=16, high=129, size=(),
-                generator=rng)
+        out_size = rng.randint(low=16, high=129)
         layers.append(nn.Conv2d(in_size, out_size, 3, 1))
         if use_dropout:
-            layers.append(nn.Dropout(torch.rand(size=(), generator=rng)))
+            layers.append(nn.Dropout(rng.rand()))
         layers.append(nn.ReLU())
         in_size = out_size
 
     if use_pooling:
-        layers.append(nn.MaxPool2d(torch.randint(low=2, high=5,
-            size=(), generator=rng).item()))
+        layers.append(nn.MaxPool2d(rng.randint(low=2, high=5)))
 
     return nn.Sequential(*layers)
 
@@ -44,9 +42,9 @@ def random_mnist_model(rng, **kwargs):
         def __init__(self):
             super().__init__()
             self.f = random_feature_extractor(rng)
-            n_features = torch.prod(torch.tensor(self.f(torch.rand((1, 1, 28,
-                28), generator=rng)).shape))
-            size = torch.randint(low=16, high=129, size=(), generator=rng)
+            n_features = torch.prod(torch.tensor(self.f(torch.zeros((1, 1, 28,
+                28))).shape))
+            size = rng.randint(low=16, high=129)
             self.fc1 = nn.Linear(n_features, size)
             self.fc2 = nn.Linear(size, 10)
 
@@ -81,7 +79,7 @@ def random_mnist_loader(rng, **kwargs):
 def random_optimizer_parameters(rng, **kwargs):
     lr_low = np.log(kwargs['learning_rate_range'][0])
     lr_high = np.log(kwargs['learning_rate_range'][1])
-    log_lr = (lr_low - lr_high) * torch.rand((), generator=rng) + lr_high
+    log_lr = (lr_low - lr_high) * rng.rand() + lr_high
     return {'lr': np.exp(log_lr)}
 
 
@@ -92,15 +90,15 @@ def random_mnist_instance(rng, **kwargs):
     loss = F.nll_loss
     epoch_low = kwargs['epoch_range'][0]
     epoch_high = kwargs['epoch_range'][1]
-    epochs = torch.randint(low=epoch_low, high=epoch_high, size=(), generator=rng)
+    epochs = rng.randint(low=epoch_low, high=epoch_high)
     return model, optimizer_params, loss, loaders, epochs
 
 
 def random_instance(rng, **kwargs):
     print(kwargs)
     datasets = ['MNIST']
-    idx = torch.randint(high=len(datasets), size=(), generator=rng)
-    dataset = datasets[idx.item()]
+    idx = rng.randint(low=0, high=len(datasets))
+    dataset = datasets[idx]
     if dataset == 'MNIST':
         instance = random_mnist_instance(rng, **kwargs)
     else:

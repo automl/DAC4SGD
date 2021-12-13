@@ -2,7 +2,9 @@ import operator
 import functools
 import random
 import inspect
+from itertools import cycle
 from typing import Optional, Union, Iterator
+import types
 
 import gym
 from gym import error, spaces, utils
@@ -20,8 +22,6 @@ from .config import default_config
 
 
 # TODO: GPU Support
-# TODO: Convert torch.random to np.RandomState for instance selection
-# TODO: Implement instance selection to reset (Generator or int)
 # TODO: Custom action {'name': 'reset', 'type': spaces.Binary, 'func': func}
 #       func(optimizer, actions) -> None change optimizer state directly
 # TODO: Change default architecture generator to have fixed depth, structure
@@ -43,6 +43,8 @@ class SGDEnv(gym.Env, utils.EzPickle):
         self.config = default_config.asdict()
         self.g = torch.Generator(device='cpu')
         self.instance_func = self._create_instance_func(**self.config.generator)
+        self.instance = cycle(range(self.config.dac.n_instances))
+        self.np_random, seed = seeding.np_random()
 
         actions = {}
         sig = inspect.signature(self.config.optimizer.optimizer)
@@ -86,13 +88,21 @@ class SGDEnv(gym.Env, utils.EzPickle):
             rng = np.random.RandomState()
             self.instance_seeds = random_seeds(rng, self.config.dac.n_instances)
 
+        if instance is None:
+            instance = next(self.instance)
+        elif isinstance(instance, types.GeneratorType):
+            instance = next(instance)
+        elif not isinstance(instance, int):
+            raise NotImplementedError
+
         default_rng_state = torch.get_rng_state()
-        seed = torch.randint(0, MAX_SEED, (), generator=self.g)
+        seed = self.instance_seeds[instance]
         torch.manual_seed(seed)
         torch.cuda.manual_seed(seed)
         torch.cuda.manual_seed_all(seed)
+        rng = np.random.RandomState(seed)
 
-        instance = self.instance_func(self.g)
+        instance = self.instance_func(rng)
         self.model, optimizer_params, self.loss, loaders, self.epochs = instance
         self.train_loader, self.test_loader = loaders
         self.optimizer = self.create_optimizer(
