@@ -10,13 +10,13 @@ from .generators import InstanceGeneratorFunc, random_instance
 default_config = Config()
 
 
-@default_config('dac')
+@default_config("dac")
 class DACConfig:
-    control: List[str] = field(default_factory=lambda: ['lr'])
+    control: List[str] = field(default_factory=lambda: ["lr"])
     n_instances: int = 100
 
 
-@default_config('optimizer')
+@default_config("optimizer")
 class OptimizerConfig:
     optimizer: Type[torch.optim.Optimizer] = torch.optim.AdamW
 
@@ -27,7 +27,7 @@ class OptimizerConfig:
     amsgrad: bool = False
 
 
-@default_config('generator')
+@default_config("generator")
 class GeneratorConfig:
     generator_func: InstanceGeneratorFunc = random_instance
 
@@ -36,5 +36,3 @@ class GeneratorConfig:
     learning_rate_range: Tuple[float, float] = (0.0001, 1.0)
     training_batch_size: int = 64
     validation_batch_size: int = 64
-
-

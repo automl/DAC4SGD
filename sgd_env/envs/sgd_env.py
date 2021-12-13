@@ -41,7 +41,7 @@ def random_seeds(rng, n):
 class SGDEnv(gym.Env, utils.EzPickle):
     def __init__(self, config=default_config):
         self.config = default_config.asdict()
-        self.g = torch.Generator(device='cpu')
+        self.g = torch.Generator(device="cpu")
         self.instance_func = self._create_instance_func(**self.config.generator)
         self.instance = cycle(range(self.config.dac.n_instances))
         self.np_random, seed = seeding.np_random()
@@ -59,7 +59,6 @@ class SGDEnv(gym.Env, utils.EzPickle):
         self.action_space = spaces.Dict(actions)
         self.instance_seeds = []
 
-
     def _create_instance_func(self, generator_func, **kwargs):
         return functools.partial(generator_func, **kwargs)
 
@@ -68,7 +67,7 @@ class SGDEnv(gym.Env, utils.EzPickle):
 
     def step(self, action):
         for g in self.optimizer.param_groups:
-            g['lr'] = action['lr']
+            g["lr"] = action["lr"]
         default_rng_state = torch.get_rng_state()
         torch.set_rng_state(self.env_rng_state)
         loss = self.epoch()
@@ -106,9 +105,8 @@ class SGDEnv(gym.Env, utils.EzPickle):
         self.model, optimizer_params, self.loss, loaders, self.epochs = instance
         self.train_loader, self.test_loader = loaders
         self.optimizer = self.create_optimizer(
-            **self.config.optimizer,
-            **optimizer_params,
-            params=self.model.parameters())
+            **self.config.optimizer, **optimizer_params, params=self.model.parameters()
+        )
         self.env_rng_state = torch.get_rng_state()
         torch.set_rng_state(default_rng_state)
 
@@ -134,7 +132,7 @@ class SGDEnv(gym.Env, utils.EzPickle):
         with torch.no_grad():
             for data, target in self.test_loader:
                 output = self.model(data)
-                test_loss += self.loss(output, target, reduction='sum').item()
+                test_loss += self.loss(output, target, reduction="sum").item()
         print(len(self.test_loader.dataset))
         test_loss /= len(self.test_loader.dataset)
         return test_loss
