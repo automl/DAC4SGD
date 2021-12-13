@@ -15,7 +15,7 @@ from torchvision import datasets, transforms
 from torch import nn
 import torch.nn.functional as F
 
-from .generators import random_instance_generator
+from .generators import random_instance
 from .config import default_config
 
 
@@ -31,22 +31,18 @@ MAX_SEED = 4025501053080439804
 NP_MAX_SEED = 4294967295
 
 
-def random_states(rng, n):
-    default_state = np.random.get_state()
-    states = []
+def random_seeds(rng, n):
+    seeds = []
     for _ in range(n):
-        np.random.seed(rng.randint(1, NP_MAX_SEED))
-        state = np.random.get_state()
-        states.append(state)
-    np.random.set_state(default_state)
-    return states
+        seeds.append(rng.randint(1, NP_MAX_SEED))
+    return seeds
 
 
 class SGDEnv(gym.Env, utils.EzPickle):
     def __init__(self, config=default_config):
         self.config = default_config.asdict()
         self.g = torch.Generator(device='cpu')
-        self.instance_gen = self._create_instance_generator(**self.config.generator)
+        self.instance_func = self._create_instance_func(**self.config.generator)
 
         actions = {}
         sig = inspect.signature(self.config.optimizer.optimizer)
@@ -59,11 +55,11 @@ class SGDEnv(gym.Env, utils.EzPickle):
                     action = spaces.Box(low=-np.inf, high=np.inf, shape=(1,))
                 actions[name] = action
         self.action_space = spaces.Dict(actions)
-        self.instance_random_states = []
+        self.instance_seeds = []
 
 
-    def _create_instance_generator(self, generator_func, **kwargs):
-        return generator_func(self.g, **kwargs)
+    def _create_instance_func(self, generator_func, **kwargs):
+        return functools.partial(generator_func, **kwargs)
 
     def create_optimizer(self, optimizer, params, **kwargs):
         return optimizer(params, **kwargs)
@@ -86,9 +82,9 @@ class SGDEnv(gym.Env, utils.EzPickle):
 
     def reset(self, instance: Optional[Union[int, Iterator[int]]] = None):
         self._step = 0
-        if len(self.instance_random_states) == 0:
-            rng = np.random.default_rng()
-            self.instance_random_states = random_states(rng, self.config.dac.n_instances)
+        if len(self.instance_seeds) == 0:
+            rng = np.random.RandomState()
+            self.instance_seeds = random_seeds(rng, self.config.dac.n_instances)
 
         default_rng_state = torch.get_rng_state()
         seed = torch.randint(0, MAX_SEED, (), generator=self.g)
@@ -96,7 +92,7 @@ class SGDEnv(gym.Env, utils.EzPickle):
         torch.cuda.manual_seed(seed)
         torch.cuda.manual_seed_all(seed)
 
-        instance = next(self.instance_gen)
+        instance = self.instance_func(self.g)
         self.model, optimizer_params, self.loss, loaders, self.epochs = instance
         self.train_loader, self.test_loader = loaders
         self.optimizer = self.create_optimizer(
@@ -112,7 +108,7 @@ class SGDEnv(gym.Env, utils.EzPickle):
             self.g.manual_seed(seed)
             torch.backends.cudnn.benchmark = False
             torch.backends.cudnn.deterministic = True
-        self.instance_random_states = random_states(self.np_random, self.config.dac.n_instances)
+        self.instance_seeds = random_seeds(self.np_random, self.config.dac.n_instances)
         return [seed]
 
     def epoch(self):

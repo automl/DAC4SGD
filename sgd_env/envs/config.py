@@ -4,7 +4,7 @@ from typing import List, Tuple, Type
 import torch
 
 from .dataclass_config import Config
-from .generators import InstanceGeneratorFunc, random_instance_generator
+from .generators import InstanceGeneratorFunc, random_instance
 
 
 default_config = Config()
@@ -29,7 +29,7 @@ class OptimizerConfig:
 
 @default_config('generator')
 class GeneratorConfig:
-    generator_func: InstanceGeneratorFunc = random_instance_generator
+    generator_func: InstanceGeneratorFunc = random_instance
 
     # User settings
     epoch_range: Tuple[int, int] = (300, 900)

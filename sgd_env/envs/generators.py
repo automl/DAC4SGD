@@ -13,7 +13,7 @@ OptimizerParams = nn.Module
 LossType = nn.Module
 
 DataIterator = Iterator[Tuple[torch.Tensor, torch.Tensor]]
-InstanceGenerator = Iterator[Tuple[Model, OptimizerParams, LossType, DataIterator, Epochs]]
+InstanceGenerator = Tuple[Model, OptimizerParams, LossType, DataIterator, Epochs]
 InstanceGeneratorFunc = Callable[[torch.Generator, ...], InstanceGenerator]
 
 
@@ -96,14 +96,13 @@ def random_mnist_instance(rng, **kwargs):
     return model, optimizer_params, loss, loaders, epochs
 
 
-def random_instance_generator(rng, **kwargs):
+def random_instance(rng, **kwargs):
     print(kwargs)
     datasets = ['MNIST']
-    while True:
-        idx = torch.randint(high=len(datasets), size=(), generator=rng)
-        dataset = datasets[idx.item()]
-        if dataset == 'MNIST':
-            instance = random_mnist_instance(rng, **kwargs)
-        else:
-            raise NotImplementedError
-        yield instance
+    idx = torch.randint(high=len(datasets), size=(), generator=rng)
+    dataset = datasets[idx.item()]
+    if dataset == 'MNIST':
+        instance = random_mnist_instance(rng, **kwargs)
+    else:
+        raise NotImplementedError
+    return instance
