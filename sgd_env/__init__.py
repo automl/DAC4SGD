@@ -6,3 +6,5 @@ register(
     id="sgd-v0",
     entry_point="sgd_env.envs:SGDEnv",
 )
+
+__all__ = ["hyperparameters"]

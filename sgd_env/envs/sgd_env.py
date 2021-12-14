@@ -1,23 +1,16 @@
-import operator
 import functools
-import random
 import inspect
 from itertools import cycle
 from typing import Optional, Union, Iterator
 import types
 
 import gym
-from gym import error, spaces, utils
+from gym import spaces, utils
 from gym.utils import seeding
-from gym import utils
 
 import numpy as np
 import torch
-from torchvision import datasets, transforms
-from torch import nn
-import torch.nn.functional as F
 
-from .generators import random_instance
 from .config import default_config
 
 

@@ -1,10 +1,9 @@
-from typing import Callable, Generator, Any, Iterator, Tuple
+from typing import Callable, Iterator, Tuple
 
 import torch
 from torch import nn
 import torch.nn.functional as F
 from torchvision import datasets, transforms
-import numpy as np
 
 
 Epochs = int
