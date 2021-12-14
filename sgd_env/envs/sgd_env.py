@@ -15,6 +15,7 @@ from . import utils
 
 
 # TODO: GPU Support
+# TODO: Inf sequence?
 # TODO: Custom action {'name': 'reset', 'type': spaces.Binary, 'func': func}
 #       func(optimizer, actions) -> None change optimizer state directly
 
