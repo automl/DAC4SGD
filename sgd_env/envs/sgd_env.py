@@ -54,7 +54,7 @@ class SGDEnv(gym.Env, EzPickle):
         # test_loss = self.test()
         self.env_rng_state = torch.get_rng_state()
         torch.set_rng_state(default_rng_state)
-        return 1, -loss.item(), done, {}
+        return loss.item(), -loss.item(), done, {}
 
     def reset(self, instance: Optional[Union[int, Iterator[int]]] = None):
         self._step = 0
@@ -82,8 +82,13 @@ class SGDEnv(gym.Env, EzPickle):
         self.optimizer = utils.create_optimizer(
             **self.config.optimizer, **optimizer_params, params=self.model.parameters()
         )
+        self.model.eval()
+        (data, target) = self.train_loader.next()
+        output = self.model(data)
+        loss = self.loss(output, target)
         self.env_rng_state = torch.get_rng_state()
         torch.set_rng_state(default_rng_state)
+        return loss.item()
 
     def seed(self, seed=None):
         self.np_random, seed = seeding.np_random(seed)
