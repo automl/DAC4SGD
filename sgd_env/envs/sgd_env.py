@@ -24,7 +24,6 @@ from .config import default_config
 # TODO: GPU Support
 # TODO: Custom action {'name': 'reset', 'type': spaces.Binary, 'func': func}
 #       func(optimizer, actions) -> None change optimizer state directly
-# TODO: Change default architecture generator to have fixed depth, structure
 
 
 MAX_SEED = 4025501053080439804
@@ -41,7 +40,6 @@ def random_seeds(rng, n):
 class SGDEnv(gym.Env, utils.EzPickle):
     def __init__(self, config=default_config):
         self.config = default_config.asdict()
-        self.g = torch.Generator(device="cpu")
         self.instance_func = self._create_instance_func(**self.config.generator)
         self.instance = cycle(range(self.config.dac.n_instances))
         self.np_random, seed = seeding.np_random()
@@ -113,7 +111,6 @@ class SGDEnv(gym.Env, utils.EzPickle):
     def seed(self, seed=None):
         self.np_random, seed = seeding.np_random(seed)
         if seed is not None:
-            self.g.manual_seed(seed)
             torch.backends.cudnn.benchmark = False
             torch.backends.cudnn.deterministic = True
         self.instance_seeds = random_seeds(self.np_random, self.config.dac.n_instances)
@@ -133,6 +130,5 @@ class SGDEnv(gym.Env, utils.EzPickle):
             for data, target in self.test_loader:
                 output = self.model(data)
                 test_loss += self.loss(output, target, reduction="sum").item()
-        print(len(self.test_loader.dataset))
         test_loss /= len(self.test_loader.dataset)
         return test_loss

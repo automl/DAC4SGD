@@ -68,10 +68,8 @@ def random_mnist_loader(rng, **kwargs):
 
 
 def random_optimizer_parameters(rng, **kwargs):
-    lr_low = np.log(kwargs["learning_rate_range"][0])
-    lr_high = np.log(kwargs["learning_rate_range"][1])
-    log_lr = (lr_low - lr_high) * rng.rand() + lr_high
-    return {"lr": np.exp(log_lr)}
+    lr = kwargs["learning_rate"].sample(rng)
+    return {"lr": lr}
 
 
 def random_mnist_instance(rng, **kwargs):
@@ -79,14 +77,11 @@ def random_mnist_instance(rng, **kwargs):
     loaders = random_mnist_loader(rng, **kwargs)
     optimizer_params = random_optimizer_parameters(rng, **kwargs)
     loss = F.nll_loss
-    epoch_low = kwargs["epoch_range"][0]
-    epoch_high = kwargs["epoch_range"][1]
-    epochs = rng.randint(low=epoch_low, high=epoch_high)
+    epochs = kwargs["epoch"].sample(rng)
     return model, optimizer_params, loss, loaders, epochs
 
 
 def random_instance(rng, **kwargs):
-    print(kwargs)
     datasets = ["MNIST"]
     idx = rng.randint(low=0, high=len(datasets))
     dataset = datasets[idx]
