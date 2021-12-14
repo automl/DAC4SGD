@@ -1,17 +1,17 @@
-import functools
 import inspect
 from itertools import cycle
 from typing import Optional, Union, Iterator
 import types
 
 import gym
-from gym import spaces, utils
-from gym.utils import seeding
+from gym import spaces
+from gym.utils import seeding, EzPickle
 
 import numpy as np
 import torch
 
 from .config import default_config
+from . import utils
 
 
 # TODO: GPU Support
@@ -19,21 +19,10 @@ from .config import default_config
 #       func(optimizer, actions) -> None change optimizer state directly
 
 
-MAX_SEED = 4025501053080439804
-NP_MAX_SEED = 4294967295
-
-
-def random_seeds(rng, n):
-    seeds = []
-    for _ in range(n):
-        seeds.append(rng.randint(1, NP_MAX_SEED))
-    return seeds
-
-
-class SGDEnv(gym.Env, utils.EzPickle):
+class SGDEnv(gym.Env, EzPickle):
     def __init__(self, config=default_config):
         self.config = default_config.asdict()
-        self.instance_func = self._create_instance_func(**self.config.generator)
+        self.instance_func = utils.create_instance_func(**self.config.generator)
         self.instance = cycle(range(self.config.dac.n_instances))
         self.np_random, seed = seeding.np_random()
 
@@ -49,12 +38,6 @@ class SGDEnv(gym.Env, utils.EzPickle):
                 actions[name] = action
         self.action_space = spaces.Dict(actions)
         self.instance_seeds = []
-
-    def _create_instance_func(self, generator_func, **kwargs):
-        return functools.partial(generator_func, **kwargs)
-
-    def create_optimizer(self, optimizer, params, **kwargs):
-        return optimizer(params, **kwargs)
 
     def step(self, action):
         for g in self.optimizer.param_groups:
@@ -76,7 +59,7 @@ class SGDEnv(gym.Env, utils.EzPickle):
         self._step = 0
         if len(self.instance_seeds) == 0:
             rng = np.random.RandomState()
-            self.instance_seeds = random_seeds(rng, self.config.dac.n_instances)
+            self.instance_seeds = utils.random_seeds(rng, self.config.dac.n_instances)
 
         if instance is None:
             instance = next(self.instance)
@@ -95,7 +78,7 @@ class SGDEnv(gym.Env, utils.EzPickle):
         instance = self.instance_func(rng)
         self.model, optimizer_params, self.loss, loaders, self.epochs = instance
         self.train_loader, self.test_loader = loaders
-        self.optimizer = self.create_optimizer(
+        self.optimizer = utils.create_optimizer(
             **self.config.optimizer, **optimizer_params, params=self.model.parameters()
         )
         self.env_rng_state = torch.get_rng_state()
@@ -106,7 +89,9 @@ class SGDEnv(gym.Env, utils.EzPickle):
         if seed is not None:
             torch.backends.cudnn.benchmark = False
             torch.backends.cudnn.deterministic = True
-        self.instance_seeds = random_seeds(self.np_random, self.config.dac.n_instances)
+        self.instance_seeds = utils.random_seeds(
+            self.np_random, self.config.dac.n_instances
+        )
         return [seed]
 
     def epoch(self):
