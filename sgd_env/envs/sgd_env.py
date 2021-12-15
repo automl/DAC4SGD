@@ -1,4 +1,3 @@
-import inspect
 from itertools import cycle
 from typing import Optional, Union, Iterator
 import types
@@ -16,8 +15,6 @@ from . import utils
 
 # TODO: GPU Support
 # TODO: Inf sequence?
-# TODO: Custom action {'name': 'reset', 'type': spaces.Binary, 'func': func}
-#       func(optimizer, actions) -> None change optimizer state directly
 
 
 class SGDEnv(gym.Env, EzPickle):
@@ -28,21 +25,14 @@ class SGDEnv(gym.Env, EzPickle):
         self.np_random, seed = seeding.np_random()
 
         actions = {}
-        sig = inspect.signature(self.config.optimizer.optimizer)
-        for name in self.config.dac.control:
-            if name in sig.parameters:
-                value = sig.parameters[name]
-                if isinstance(value, bool):
-                    action = spaces.Binary()
-                else:
-                    action = spaces.Box(low=-np.inf, high=np.inf, shape=(1,))
-                actions[name] = action
+        for name, space, _ in self.config.dac.actions:
+            actions[name] = space
         self.action_space = spaces.Dict(actions)
         self.instance_seeds = []
 
     def step(self, action):
-        for g in self.optimizer.param_groups:
-            g["lr"] = action["lr"]
+        for name, _, func in self.config.dac.actions:
+            func(self.optimizer, name, action)
         default_rng_state = torch.get_rng_state()
         torch.set_rng_state(self.env_rng_state)
         loss = self.epoch()

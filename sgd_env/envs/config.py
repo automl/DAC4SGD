@@ -1,7 +1,9 @@
-from dataclasses import field
-from typing import List, Tuple, Type
+from dataclasses import field, dataclass
+from typing import List, Tuple, Type, Callable
 
 import torch
+import numpy as np
+from gym.spaces import Space, Dict, Box
 
 from .dataclass_config import Config
 from .generators import InstanceGeneratorFunc, random_instance
@@ -12,10 +14,22 @@ from .hyperparameters import UniformIntegerHyperparameter
 
 default_config = Config()
 
+Actions = List[Tuple[str, Space, Callable[[torch.optim.Optimizer, str, Dict], None]]]
+
+
+def optimizer_action(optimizer, name, action):
+    for g in optimizer.param_groups:
+        g[name] = action[name]
+
+
+@dataclass(frozen=True)
+class const:
+    lr_action = ("lr", Box(low=-np.inf, high=np.inf, shape=(1,)), optimizer_action)
+
 
 @default_config("dac")
 class DACConfig:
-    control: List[str] = field(default_factory=lambda: ["lr"])
+    actions: Actions = field(default_factory=lambda: [const.lr_action])
     n_instances: int = 100
 
 
