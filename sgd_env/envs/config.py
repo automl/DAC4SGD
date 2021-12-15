@@ -1,4 +1,4 @@
-from dataclasses import field, dataclass
+from dataclasses import field
 from typing import List, Tuple, Type, Callable
 
 import torch
@@ -22,14 +22,13 @@ def optimizer_action(optimizer, name, action):
         g[name] = action[name]
 
 
-@dataclass(frozen=True)
-class const:
-    lr_action = ("lr", Box(low=-np.inf, high=np.inf, shape=(1,)), optimizer_action)
-
-
 @default_config("dac")
 class DACConfig:
-    actions: Actions = field(default_factory=lambda: [const.lr_action])
+    actions: Actions = field(
+        default_factory=lambda: [
+            ("lr", Box(low=-np.inf, high=np.inf, shape=(1,)), optimizer_action)
+        ]
+    )
     n_instances: int = 100
 
 
