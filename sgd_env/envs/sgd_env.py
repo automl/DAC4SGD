@@ -35,12 +35,12 @@ class SGDEnv(gym.Env, EzPickle):
             func(self.optimizer, name, action)
         default_rng_state = torch.get_rng_state()
         torch.set_rng_state(self.env_rng_state)
-        loss = self.epoch()
+        loss = self.training_step()
         self.optimizer.zero_grad()
         loss.backward()
         self.optimizer.step()
         self._step += 1
-        done = self._step >= self.epochs
+        done = self._step >= self.steps
         # test_loss = self.test()
         self.env_rng_state = torch.get_rng_state()
         torch.set_rng_state(default_rng_state)
@@ -69,7 +69,7 @@ class SGDEnv(gym.Env, EzPickle):
         rng = np.random.RandomState(seed)
 
         instance = self.instance_func(rng)
-        self.model, optimizer_params, self.loss, loaders, self.epochs = instance
+        self.model, optimizer_params, self.loss, loaders, self.steps = instance
         self.train_loader, self.test_loader = loaders
         self.optimizer = utils.create_optimizer(
             **self.config.optimizer, **optimizer_params, params=self.model.parameters()
@@ -92,7 +92,7 @@ class SGDEnv(gym.Env, EzPickle):
         )
         return [seed]
 
-    def epoch(self):
+    def training_step(self):
         self.model.train()
         (data, target) = self.train_loader.next()
         output = self.model(data)

@@ -6,13 +6,13 @@ import torch.nn.functional as F
 from torchvision import datasets, transforms
 
 
-Epochs = int
+Steps = int
 Model = nn.Module
 OptimizerParams = nn.Module
 LossType = nn.Module
 
 DataIterator = Iterator[Tuple[torch.Tensor, torch.Tensor]]
-InstanceGenerator = Tuple[Model, OptimizerParams, LossType, DataIterator, Epochs]
+InstanceGenerator = Tuple[Model, OptimizerParams, LossType, DataIterator, Steps]
 InstanceGeneratorFunc = Callable[[torch.Generator, ...], InstanceGenerator]
 
 
@@ -76,8 +76,8 @@ def random_mnist_instance(rng, **kwargs):
     loaders = random_mnist_loader(rng, **kwargs)
     optimizer_params = random_optimizer_parameters(rng, **kwargs)
     loss = F.nll_loss
-    epochs = kwargs["epoch"].sample(rng)
-    return model, optimizer_params, loss, loaders, epochs
+    steps = kwargs["steps"].sample(rng)
+    return model, optimizer_params, loss, loaders, steps
 
 
 def random_instance(rng, **kwargs):

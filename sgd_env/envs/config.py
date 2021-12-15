@@ -49,7 +49,7 @@ class GeneratorConfig:
     generator_func: InstanceGeneratorFunc = random_instance
 
     # User settings
-    epoch: Hyperparameter = UniformIntegerHyperparameter(300, 900)
+    steps: Hyperparameter = UniformIntegerHyperparameter(300, 900)
     learning_rate: Hyperparameter = UniformFloatHyperparameter(0.0001, 0.1, True)
     training_batch_size: int = 64
     validation_batch_size: int = 64
