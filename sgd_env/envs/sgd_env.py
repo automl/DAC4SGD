@@ -50,7 +50,9 @@ class SGDEnv(gym.Env, EzPickle):
         self._step = 0
         if len(self.instance_seeds) == 0:
             rng = np.random.RandomState()
-            self.instance_seeds = utils.random_seeds(rng, self.config.dac.n_instances)
+            self.instance_seeds = rng.randint(
+                1, 4294967295, self.config.dac.n_instances
+            )
 
         if instance is None:
             instance = next(self.instance)
@@ -85,8 +87,8 @@ class SGDEnv(gym.Env, EzPickle):
         if seed is not None:
             torch.backends.cudnn.benchmark = False
             torch.backends.cudnn.deterministic = True
-        self.instance_seeds = utils.random_seeds(
-            self.np_random, self.config.dac.n_instances
+        self.instance_seeds = self.np_random.randint(
+            1, 4294967295, self.config.dac.n_instances
         )
         return [seed]
 
