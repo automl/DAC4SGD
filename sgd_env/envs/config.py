@@ -30,6 +30,7 @@ class DACConfig:
         ]
     )
     n_instances: int = np.inf
+    device: str = "cpu"
     seed: Optional[int] = None
 
 

@@ -13,9 +13,6 @@ from .config import default_config
 from . import utils
 
 
-# TODO: GPU Support
-
-
 class SGDEnv(gym.Env, EzPickle):
     def __init__(self, config=default_config):
         self.config = default_config.asdict()
@@ -31,7 +28,14 @@ class SGDEnv(gym.Env, EzPickle):
             func(self.optimizer, name, action)
         default_rng_state = torch.get_rng_state()
         torch.set_rng_state(self.env_rng_state)
-        loss = utils.train(self.model, self.optimizer, self.loss, self.train_loader, 1)
+        loss = utils.train(
+            self.model,
+            self.optimizer,
+            self.loss,
+            self.train_loader,
+            1,
+            self.config.dac.device,
+        )
         self._step += 1
         done = self._step >= self.steps
         self.env_rng_state = torch.get_rng_state()
@@ -60,14 +64,22 @@ class SGDEnv(gym.Env, EzPickle):
         torch.cuda.manual_seed_all(seed)
         rng = np.random.RandomState(seed)
 
-        instance = self.instance_func(rng)
-        self.model, optimizer_params, self.loss, loaders, self.steps = instance
-        self.train_loader, self.test_loader = loaders
+        (
+            self.model,
+            optimizer_params,
+            self.loss,
+            (self.train_loader, self.test_loader),
+            self.steps,
+        ) = self.instance_func(rng)
+        self.model.to(self.config.dac.device)
         self.optimizer = utils.create_optimizer(
             **self.config.optimizer, **optimizer_params, params=self.model.parameters()
         )
         self.model.eval()
         (data, target) = self.train_loader.next()
+        data, target = data.to(self.config.dac.device), target.to(
+            self.config.dac.device
+        )
         output = self.model(data)
         loss = self.loss(output, target)
         self.env_rng_state = torch.get_rng_state()
