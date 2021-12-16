@@ -88,9 +88,8 @@ class SGDEnv(gym.Env, EzPickle):
 
     def seed(self, seed=None):
         self.np_random, seed = seeding.np_random(seed)
-        if seed is not None:
-            torch.backends.cudnn.benchmark = False
-            torch.backends.cudnn.deterministic = True
+        torch.backends.cudnn.benchmark = False
+        torch.backends.cudnn.deterministic = True
         self.instance_seeds = []
         if self.config.dac.n_instances == np.inf:
             self.instance = count(start=0, step=1)
