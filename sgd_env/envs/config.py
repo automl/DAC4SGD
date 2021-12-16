@@ -1,5 +1,5 @@
 from dataclasses import field
-from typing import List, Tuple, Type, Callable
+from typing import List, Tuple, Type, Callable, Optional
 
 import torch
 import numpy as np
@@ -30,6 +30,7 @@ class DACConfig:
         ]
     )
     n_instances: int = 100
+    seed: Optional[int] = None
 
 
 @default_config("optimizer")

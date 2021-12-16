@@ -21,14 +21,11 @@ class SGDEnv(gym.Env, EzPickle):
     def __init__(self, config=default_config):
         self.config = default_config.asdict()
         self.instance_func = utils.create_instance_func(**self.config.generator)
-        self.instance = cycle(range(self.config.dac.n_instances))
-        self.np_random, seed = seeding.np_random()
+        self.seed(self.config.dac.seed)
 
-        actions = {}
-        for name, space, _ in self.config.dac.actions:
-            actions[name] = space
+        actions = {name: space for name, space, _ in self.config.dac.actions}
         self.action_space = spaces.Dict(actions)
-        self.instance_seeds = []
+        self.observation_space = spaces.Box(low=0, high=np.inf, shape=(1,))
 
     def step(self, action):
         for name, _, func in self.config.dac.actions:
@@ -38,18 +35,12 @@ class SGDEnv(gym.Env, EzPickle):
         loss = utils.train(self.model, self.optimizer, self.loss, self.train_loader, 1)
         self._step += 1
         done = self._step >= self.steps
-        # test_loss = self.test()
         self.env_rng_state = torch.get_rng_state()
         torch.set_rng_state(default_rng_state)
         return loss.item(), -loss.item(), done, {}
 
     def reset(self, instance: Optional[Union[int, Iterator[int]]] = None):
         self._step = 0
-        if len(self.instance_seeds) == 0:
-            rng = np.random.RandomState()
-            self.instance_seeds = rng.randint(
-                1, 4294967295, self.config.dac.n_instances
-            )
 
         if instance is None:
             instance = next(self.instance)
@@ -87,4 +78,5 @@ class SGDEnv(gym.Env, EzPickle):
         self.instance_seeds = self.np_random.randint(
             1, 4294967295, self.config.dac.n_instances
         )
+        self.instance = cycle(range(self.config.dac.n_instances))
         return [seed]
