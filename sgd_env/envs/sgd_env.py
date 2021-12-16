@@ -88,13 +88,3 @@ class SGDEnv(gym.Env, EzPickle):
             1, 4294967295, self.config.dac.n_instances
         )
         return [seed]
-
-    def test(self):
-        self.model.eval()
-        test_loss = 0
-        with torch.no_grad():
-            for data, target in self.test_loader:
-                output = self.model(data)
-                test_loss += self.loss(output, target, reduction="sum").item()
-        test_loss /= len(self.test_loader.dataset)
-        return test_loss
