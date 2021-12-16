@@ -29,7 +29,7 @@ class DACConfig:
             ("lr", Box(low=-np.inf, high=np.inf, shape=(1,)), optimizer_action)
         ]
     )
-    n_instances: int = 100
+    n_instances: int = np.inf
     seed: Optional[int] = None
 
 

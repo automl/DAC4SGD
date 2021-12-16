@@ -1,4 +1,4 @@
-from itertools import cycle
+from itertools import cycle, count
 from typing import Optional, Union, Iterator
 import types
 
@@ -14,7 +14,6 @@ from . import utils
 
 
 # TODO: GPU Support
-# TODO: Inf sequence?
 
 
 class SGDEnv(gym.Env, EzPickle):
@@ -50,6 +49,11 @@ class SGDEnv(gym.Env, EzPickle):
             raise NotImplementedError
 
         default_rng_state = torch.get_rng_state()
+        assert instance < self.config.dac.n_instances
+        if instance <= len(self.instance_seeds):
+            seed = self.np_random.randint(1, 4294967295)
+            self.instance_seeds.append(seed)
+
         seed = self.instance_seeds[instance]
         torch.manual_seed(seed)
         torch.cuda.manual_seed(seed)
@@ -75,8 +79,9 @@ class SGDEnv(gym.Env, EzPickle):
         if seed is not None:
             torch.backends.cudnn.benchmark = False
             torch.backends.cudnn.deterministic = True
-        self.instance_seeds = self.np_random.randint(
-            1, 4294967295, self.config.dac.n_instances
-        )
-        self.instance = cycle(range(self.config.dac.n_instances))
+        self.instance_seeds = []
+        if self.config.dac.n_instances == np.inf:
+            self.instance = count(start=0, step=1)
+        else:
+            self.instance = cycle(range(self.config.dac.n_instances))
         return [seed]
