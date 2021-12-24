@@ -1,4 +1,5 @@
 import functools
+from typing import Type
 
 import torch
 
@@ -7,14 +8,16 @@ def create_instance_func(generator_func, **kwargs):
     return functools.partial(generator_func, **kwargs)
 
 
-def create_optimizer(optimizer, params, **kwargs):
+def create_optimizer(
+    optimizer: Type[torch.optim.Optimizer], params, **kwargs
+) -> torch.optim.Optimizer:
     return optimizer(params, **kwargs)
 
 
 def train(model, optimizer, loss_function, loader, steps, device="cpu"):
     model.train()
     for step in range(steps):
-        (data, target) = loader.next()
+        (data, target) = next(loader)
         data, target = data.to(device), target.to(device)
         output = model(data)
         loss = loss_function(output, target)

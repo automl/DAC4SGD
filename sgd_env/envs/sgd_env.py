@@ -1,5 +1,5 @@
 from itertools import cycle, count
-from typing import Optional, Union, Iterator
+from typing import Optional, Union, Iterator, Tuple
 import types
 
 import gym
@@ -24,7 +24,7 @@ class SGDEnv(gym.Env, EzPickle):
         self.action_space = spaces.Dict(actions)
         self.observation_space = spaces.Box(low=0, high=np.inf, shape=(1,))
 
-    def step(self, action):
+    def step(self, action: spaces.Dict):
         for name, _, func in self.config.dac.actions:
             func(self.optimizer, name, action)
         default_rng_state = torch.get_rng_state()
@@ -39,7 +39,7 @@ class SGDEnv(gym.Env, EzPickle):
         )
         self._step += 1
         done = self._step >= self.steps
-        self.env_rng_state = torch.get_rng_state()
+        self.env_rng_state.data = torch.get_rng_state()
         torch.set_rng_state(default_rng_state)
         return loss.item(), -loss.item(), done, {}
 
@@ -52,7 +52,7 @@ class SGDEnv(gym.Env, EzPickle):
                 self.model,
                 optimizer_params,
                 self.loss,
-                (self.train_loader, self.test_loader),
+                (train_loader, _),
                 self.steps,
             ) = instance
         else:
@@ -80,22 +80,25 @@ class SGDEnv(gym.Env, EzPickle):
                 self.model,
                 optimizer_params,
                 self.loss,
-                (self.train_loader, self.test_loader),
+                (train_loader, _),
                 self.steps,
             ) = self.instance_func(rng)
 
+        self.train_loader: Iterator[Tuple[torch.Tensor, torch.Tensor]] = iter(
+            train_loader
+        )
         self.model.to(self.config.dac.device)
-        self.optimizer = utils.create_optimizer(
+        self.optimizer: torch.optim.Optimizer = utils.create_optimizer(
             **self.config.optimizer, **optimizer_params, params=self.model.parameters()
         )
         self.model.eval()
-        (data, target) = self.train_loader.next()
+        (data, target) = next(self.train_loader)
         data, target = data.to(self.config.dac.device), target.to(
             self.config.dac.device
         )
         output = self.model(data)
         loss = self.loss(output, target)
-        self.env_rng_state = torch.get_rng_state()
+        self.env_rng_state: torch.Tensor = torch.get_rng_state()
         torch.set_rng_state(default_rng_state)
         return loss.item()
 

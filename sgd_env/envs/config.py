@@ -17,9 +17,11 @@ default_config = Config()
 Actions = List[Tuple[str, Space, Callable[[torch.optim.Optimizer, str, Dict], None]]]
 
 
-def optimizer_action(optimizer, name, action):
+def optimizer_action(
+    optimizer: torch.optim.Optimizer, name: str, actions: Dict
+) -> None:
     for g in optimizer.param_groups:
-        g[name] = action[name]
+        g[name] = actions[name]
 
 
 @default_config("dac")

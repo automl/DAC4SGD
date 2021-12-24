@@ -1,8 +1,10 @@
 from collections import namedtuple
+from typing import Tuple
 
 import torch
 from torch import nn
 import torch.nn.functional as F
+from torch.utils.data.dataloader import DataLoader
 from torchvision import datasets, transforms
 import numpy as np
 
@@ -49,7 +51,9 @@ def random_mnist_model(rng: np.random.RandomState, **kwargs) -> nn.Module:
     return MNISTModel()
 
 
-def random_mnist_loader(rng: np.random.RandomState, **kwargs):
+def random_mnist_loader(
+    rng: np.random.RandomState, **kwargs
+) -> Tuple[DataLoader, DataLoader]:
     transform = transforms.Compose(
         [transforms.ToTensor(), transforms.Normalize((0.1307,), (0.3081,))]
     )
@@ -57,9 +61,9 @@ def random_mnist_loader(rng: np.random.RandomState, **kwargs):
     test_kwargs = {"batch_size": kwargs["validation_batch_size"]}
     dataset1 = datasets.MNIST("data", train=True, download=True, transform=transform)
     dataset2 = datasets.MNIST("data", train=False, transform=transform)
-    train_loader = torch.utils.data.DataLoader(dataset1, **train_kwargs)
-    test_loader = torch.utils.data.DataLoader(dataset2, **test_kwargs)
-    return iter(train_loader), test_loader
+    train_loader = DataLoader(dataset1, **train_kwargs)
+    test_loader = DataLoader(dataset2, **test_kwargs)
+    return train_loader, test_loader
 
 
 def random_optimizer_parameters(rng, **kwargs):
