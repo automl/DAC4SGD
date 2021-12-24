@@ -1,22 +1,18 @@
-from typing import Callable, Iterator, Tuple
+from collections import namedtuple
 
 import torch
 from torch import nn
 import torch.nn.functional as F
 from torchvision import datasets, transforms
+import numpy as np
 
 
-Steps = int
-Model = nn.Module
-OptimizerParams = nn.Module
-LossType = nn.Module
-
-DataIterator = Iterator[Tuple[torch.Tensor, torch.Tensor]]
-InstanceGenerator = Tuple[Model, OptimizerParams, LossType, DataIterator, Steps]
-InstanceGeneratorFunc = Callable[[torch.Generator, ...], InstanceGenerator]
+Instance = namedtuple(
+    "Instance", ["model", "optimizer_params", "loss", "loaders", "steps"]
+)
 
 
-def random_feature_extractor(rng, **kwargs):
+def random_feature_extractor(rng: np.random.RandomState, **kwargs) -> nn.Module:
     conv1 = rng.randint(low=16, high=129)
     conv2 = rng.randint(low=16, high=129)
     return nn.Sequential(
@@ -29,7 +25,7 @@ def random_feature_extractor(rng, **kwargs):
     )
 
 
-def random_mnist_model(rng, **kwargs):
+def random_mnist_model(rng: np.random.RandomState, **kwargs) -> nn.Module:
     class MNISTModel(nn.Module):
         def __init__(self):
             super().__init__()
@@ -53,7 +49,7 @@ def random_mnist_model(rng, **kwargs):
     return MNISTModel()
 
 
-def random_mnist_loader(rng, **kwargs):
+def random_mnist_loader(rng: np.random.RandomState, **kwargs):
     transform = transforms.Compose(
         [transforms.ToTensor(), transforms.Normalize((0.1307,), (0.3081,))]
     )
@@ -71,16 +67,16 @@ def random_optimizer_parameters(rng, **kwargs):
     return {"lr": lr}
 
 
-def random_mnist_instance(rng, **kwargs):
+def random_mnist_instance(rng: np.random.RandomState, **kwargs) -> Instance:
     model = random_mnist_model(rng, **kwargs)
     loaders = random_mnist_loader(rng, **kwargs)
     optimizer_params = random_optimizer_parameters(rng, **kwargs)
     loss = F.nll_loss
     steps = kwargs["steps"].sample(rng)
-    return model, optimizer_params, loss, loaders, steps
+    return Instance(model, optimizer_params, loss, loaders, steps)
 
 
-def random_instance(rng, **kwargs):
+def random_instance(rng: np.random.RandomState, **kwargs) -> Instance:
     datasets = ["MNIST"]
     idx = rng.randint(low=0, high=len(datasets))
     dataset = datasets[idx]

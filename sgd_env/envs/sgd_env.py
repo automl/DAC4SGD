@@ -10,6 +10,7 @@ import numpy as np
 import torch
 
 from .config import default_config
+from .generators import Instance
 from . import utils
 
 
@@ -42,35 +43,47 @@ class SGDEnv(gym.Env, EzPickle):
         torch.set_rng_state(default_rng_state)
         return loss.item(), -loss.item(), done, {}
 
-    def reset(self, instance: Optional[Union[int, Iterator[int]]] = None):
+    def reset(self, instance: Optional[Union[Instance, int, Iterator[int]]] = None):
         self._step = 0
-
-        if instance is None:
-            instance = next(self.instance)
-        elif isinstance(instance, types.GeneratorType):
-            instance = next(instance)
-        elif not isinstance(instance, int):
-            raise NotImplementedError
-
         default_rng_state = torch.get_rng_state()
-        assert instance < self.config.dac.n_instances
-        if instance <= len(self.instance_seeds):
-            seed = self.np_random.randint(1, 4294967295)
-            self.instance_seeds.append(seed)
 
-        seed = self.instance_seeds[instance]
-        torch.manual_seed(seed)
-        torch.cuda.manual_seed(seed)
-        torch.cuda.manual_seed_all(seed)
-        rng = np.random.RandomState(seed)
+        if isinstance(instance, Instance):
+            (
+                self.model,
+                optimizer_params,
+                self.loss,
+                (self.train_loader, self.test_loader),
+                self.steps,
+            ) = instance
+        else:
+            if instance is None:
+                instance_idx = next(self.instance)
+            elif isinstance(instance, types.GeneratorType):
+                instance_idx = next(instance)
+            elif isinstance(instance, int):
+                instance_idx = instance
+            else:
+                raise NotImplementedError
 
-        (
-            self.model,
-            optimizer_params,
-            self.loss,
-            (self.train_loader, self.test_loader),
-            self.steps,
-        ) = self.instance_func(rng)
+            assert instance_idx < self.config.dac.n_instances
+            while instance_idx >= len(self.instance_seeds):
+                seed = self.np_random.randint(1, 4294967295)
+                self.instance_seeds.append(seed)
+
+            seed = self.instance_seeds[instance_idx]
+            torch.manual_seed(seed)
+            torch.cuda.manual_seed(seed)
+            torch.cuda.manual_seed_all(seed)
+            rng = np.random.RandomState(seed)
+
+            (
+                self.model,
+                optimizer_params,
+                self.loss,
+                (self.train_loader, self.test_loader),
+                self.steps,
+            ) = self.instance_func(rng)
+
         self.model.to(self.config.dac.device)
         self.optimizer = utils.create_optimizer(
             **self.config.optimizer, **optimizer_params, params=self.model.parameters()

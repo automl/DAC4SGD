@@ -1,12 +1,12 @@
 from dataclasses import field
-from typing import List, Tuple, Type, Callable, Optional
+from typing import List, Tuple, Type, Callable, Optional, Union, Protocol
 
 import torch
 import numpy as np
 from gym.spaces import Space, Dict, Box
 
 from .dataclass_config import Config
-from .generators import InstanceGeneratorFunc, random_instance
+from .generators import Instance, random_instance
 from .hyperparameters import Hyperparameter
 from .hyperparameters import UniformFloatHyperparameter
 from .hyperparameters import UniformIntegerHyperparameter
@@ -29,7 +29,7 @@ class DACConfig:
             ("lr", Box(low=-np.inf, high=np.inf, shape=(1,)), optimizer_action)
         ]
     )
-    n_instances: int = np.inf
+    n_instances: Union[int, float] = np.inf
     device: str = "cpu"
     seed: Optional[int] = None
 
@@ -45,9 +45,14 @@ class OptimizerConfig:
     amsgrad: bool = False
 
 
+class GeneratorFunc(Protocol):
+    def __call__(self, rng: np.random.RandomState, **kwargs: int) -> Instance:
+        ...
+
+
 @default_config("generator")
 class GeneratorConfig:
-    generator_func: InstanceGeneratorFunc = random_instance
+    generator_func: GeneratorFunc = random_instance
 
     # User settings
     steps: Hyperparameter = UniformIntegerHyperparameter(300, 900)
