@@ -58,12 +58,9 @@ def random_mnist_loader(
         [transforms.ToTensor(), transforms.Normalize((0.1307,), (0.3081,))]
     )
     train_kwargs = {"batch_size": kwargs["training_batch_size"]}
-    test_kwargs = {"batch_size": kwargs["validation_batch_size"]}
     dataset1 = datasets.MNIST("data", train=True, download=True, transform=transform)
-    dataset2 = datasets.MNIST("data", train=False, transform=transform)
     train_loader = DataLoader(dataset1, **train_kwargs)
-    test_loader = DataLoader(dataset2, **test_kwargs)
-    return train_loader, test_loader
+    return train_loader, None
 
 
 def random_optimizer_parameters(rng, **kwargs):

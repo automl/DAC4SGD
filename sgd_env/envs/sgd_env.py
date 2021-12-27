@@ -1,5 +1,6 @@
 from itertools import cycle, count
-from typing import Optional, Union, Iterator, Tuple
+from functools import partial
+from typing import Optional, Union, Iterator, Tuple, Protocol
 import types
 
 import gym
@@ -9,23 +10,49 @@ from gym.utils import seeding, EzPickle
 import numpy as np
 import torch
 
-from .config import default_config
-from .generators import Instance
+from .generators import Instance, random_instance
+from .hyperparameters import UniformIntegerHyperparameter
+from .hyperparameters import UniformFloatHyperparameter
 from . import utils
 
 
-class SGDEnv(gym.Env, EzPickle):
-    def __init__(self, config=default_config):
-        self.config = default_config.asdict()
-        self.instance_func = utils.create_instance_func(**self.config.generator)
-        self.seed(self.config.dac.seed)
+class GeneratorFunc(Protocol):
+    def __call__(self, rng: np.random.RandomState, **kwargs: int) -> Instance:
+        ...
 
-        actions = {name: space for name, space, _ in self.config.dac.actions}
-        self.action_space = spaces.Dict(actions)
+
+class SGDEnv(gym.Env, EzPickle):
+    def __init__(
+        self,
+        generator: GeneratorFunc = partial(
+            random_instance,
+            steps=UniformIntegerHyperparameter(300, 900),
+            learning_rate=UniformFloatHyperparameter(0.0001, 0.1, True),
+            training_batch_size=64
+        ),
+        n_instances: Union[int, float] = np.inf,
+        device: str = "cpu"
+    ):
+        self.generator = generator
+        self.n_instances = n_instances
+        self.device = device
+        self.seed()
+
+        self.actions = [
+            (
+                "lr",
+                spaces.Box(low=-np.inf, high=np.inf, shape=(1,)),
+                utils.optimizer_action,
+            )
+        ]
+
+        self.action_space = spaces.Dict(
+            {name: space for name, space, _ in self.actions}
+        )
         self.observation_space = spaces.Box(low=0, high=np.inf, shape=(1,))
 
     def step(self, action: spaces.Dict):
-        for name, _, func in self.config.dac.actions:
+        for name, _, func in self.actions:
             func(self.optimizer, name, action)
         default_rng_state = torch.get_rng_state()
         torch.set_rng_state(self.env_rng_state)
@@ -35,7 +62,7 @@ class SGDEnv(gym.Env, EzPickle):
             self.loss,
             self.train_loader,
             1,
-            self.config.dac.device,
+            self.device,
         )
         self._step += 1
         done = self._step >= self.steps
@@ -65,7 +92,7 @@ class SGDEnv(gym.Env, EzPickle):
             else:
                 raise NotImplementedError
 
-            assert instance_idx < self.config.dac.n_instances
+            assert instance_idx < self.n_instances
             while instance_idx >= len(self.instance_seeds):
                 seed = self.np_random.randint(1, 4294967295)
                 self.instance_seeds.append(seed)
@@ -82,19 +109,19 @@ class SGDEnv(gym.Env, EzPickle):
                 self.loss,
                 (train_loader, _),
                 self.steps,
-            ) = self.instance_func(rng)
+            ) = self.generator(rng)
 
         self.train_loader: Iterator[Tuple[torch.Tensor, torch.Tensor]] = iter(
             train_loader
         )
-        self.model.to(self.config.dac.device)
-        self.optimizer: torch.optim.Optimizer = utils.create_optimizer(
-            **self.config.optimizer, **optimizer_params, params=self.model.parameters()
+        self.model.to(self.device)
+        self.optimizer: torch.optim.Optimizer = torch.optim.AdamW(
+            **optimizer_params, params=self.model.parameters()
         )
         self.model.eval()
         (data, target) = next(self.train_loader)
-        data, target = data.to(self.config.dac.device), target.to(
-            self.config.dac.device
+        data, target = data.to(self.device), target.to(
+            self.device
         )
         output = self.model(data)
         loss = self.loss(output, target)
@@ -107,8 +134,8 @@ class SGDEnv(gym.Env, EzPickle):
         torch.backends.cudnn.benchmark = False
         torch.backends.cudnn.deterministic = True
         self.instance_seeds = []
-        if self.config.dac.n_instances == np.inf:
+        if self.n_instances == np.inf:
             self.instance = count(start=0, step=1)
         else:
-            self.instance = cycle(range(self.config.dac.n_instances))
+            self.instance = cycle(range(self.n_instances))
         return [seed]

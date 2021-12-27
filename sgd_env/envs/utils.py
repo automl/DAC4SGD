@@ -2,6 +2,7 @@ import functools
 from typing import Type
 
 import torch
+from gym import spaces
 
 
 def create_instance_func(generator_func, **kwargs):
@@ -12,6 +13,13 @@ def create_optimizer(
     optimizer: Type[torch.optim.Optimizer], params, **kwargs
 ) -> torch.optim.Optimizer:
     return optimizer(params, **kwargs)
+
+
+def optimizer_action(
+    optimizer: torch.optim.Optimizer, name: str, actions: spaces.Dict
+) -> None:
+    for g in optimizer.param_groups:
+        g[name] = actions[name]
 
 
 def train(model, optimizer, loss_function, loader, steps, device="cpu"):

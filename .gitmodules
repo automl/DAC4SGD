@@ -1,3 +1,0 @@
-[submodule "sgd_env/envs/dataclass_config"]
-	path = sgd_env/envs/dataclass_config
-	url = https://github.com/goktug97/dataclass_config
