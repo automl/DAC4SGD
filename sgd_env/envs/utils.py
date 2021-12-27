@@ -1,18 +1,5 @@
-import functools
-from typing import Type
-
 import torch
 from gym import spaces
-
-
-def create_instance_func(generator_func, **kwargs):
-    return functools.partial(generator_func, **kwargs)
-
-
-def create_optimizer(
-    optimizer: Type[torch.optim.Optimizer], params, **kwargs
-) -> torch.optim.Optimizer:
-    return optimizer(params, **kwargs)
 
 
 def optimizer_action(
@@ -28,9 +15,9 @@ def train(model, optimizer, loss_function, loader, steps, device="cpu"):
         (data, target) = next(loader)
         data, target = data.to(device), target.to(device)
         output = model(data)
-        loss = loss_function(output, target)
+        loss = loss_function(output, target, reduction="none")
         optimizer.zero_grad()
-        loss.backward()
+        loss.mean().backward()
         optimizer.step()
     return loss
 

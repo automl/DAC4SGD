@@ -1,5 +1,5 @@
 from collections import namedtuple
-from typing import Tuple
+from typing import Tuple, Any
 
 import torch
 from torch import nn
@@ -10,7 +10,17 @@ import numpy as np
 
 
 Instance = namedtuple(
-    "Instance", ["model", "optimizer_params", "loss", "loaders", "steps"]
+    "Instance",
+    [
+        "dataset",
+        "model",
+        "optimizer_params",
+        "loss",
+        "batch_size",
+        "loaders",
+        "steps",
+        "crash_penalty",
+    ],
 )
 
 
@@ -51,16 +61,14 @@ def random_mnist_model(rng: np.random.RandomState, **kwargs) -> nn.Module:
     return MNISTModel()
 
 
-def random_mnist_loader(
-    rng: np.random.RandomState, **kwargs
-) -> Tuple[DataLoader, DataLoader]:
+def random_mnist_loader(rng: np.random.RandomState, **kwargs) -> Tuple[DataLoader, Any]:
     transform = transforms.Compose(
         [transforms.ToTensor(), transforms.Normalize((0.1307,), (0.3081,))]
     )
-    train_kwargs = {"batch_size": kwargs["training_batch_size"]}
+    train_kwargs = {"batch_size": kwargs["batch_size"]}
     dataset1 = datasets.MNIST("data", train=True, download=True, transform=transform)
     train_loader = DataLoader(dataset1, **train_kwargs)
-    return train_loader, None
+    return (train_loader, None)
 
 
 def random_optimizer_parameters(rng, **kwargs):
@@ -68,13 +76,15 @@ def random_optimizer_parameters(rng, **kwargs):
     return {"lr": lr}
 
 
-def random_mnist_instance(rng: np.random.RandomState, **kwargs) -> Instance:
+def random_mnist_instance(rng: np.random.RandomState, **kwargs):
     model = random_mnist_model(rng, **kwargs)
-    loaders = random_mnist_loader(rng, **kwargs)
+    batch_size = kwargs["batch_size"].sample(rng)
+    loaders = random_mnist_loader(rng, batch_size=batch_size)
     optimizer_params = random_optimizer_parameters(rng, **kwargs)
     loss = F.nll_loss
     steps = kwargs["steps"].sample(rng)
-    return Instance(model, optimizer_params, loss, loaders, steps)
+    crash_penalty = 0.0
+    return model, optimizer_params, loss, batch_size, loaders, steps, crash_penalty
 
 
 def random_instance(rng: np.random.RandomState, **kwargs) -> Instance:
@@ -85,4 +95,4 @@ def random_instance(rng: np.random.RandomState, **kwargs) -> Instance:
         instance = random_mnist_instance(rng, **kwargs)
     else:
         raise NotImplementedError
-    return instance
+    return Instance(dataset, *instance)

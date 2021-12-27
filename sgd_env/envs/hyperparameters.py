@@ -23,4 +23,4 @@ class UniformFloatHyperparameter(Hyperparameter):
 class UniformIntegerHyperparameter(UniformFloatHyperparameter):
     def sample(self, rng, size=None):
         value = super().sample(rng, size)
-        return np.rint(value)
+        return int(np.rint(value))
