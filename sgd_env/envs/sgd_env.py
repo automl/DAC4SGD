@@ -90,7 +90,7 @@ class SGDEnv(gym.Env, EzPickle):
         reward = -loss.mean() if not crashed else self.crash_penalty
         return state, reward, done, {}
 
-    def reset(self, instance: Optional[Union[Instance, int, Iterator[int]]] = None):
+    def reset(self, instance: Optional[Union[Instance, int]] = None):
         self._step = 0
         default_rng_state = torch.get_rng_state()
 
@@ -108,8 +108,6 @@ class SGDEnv(gym.Env, EzPickle):
         else:
             if instance is None:
                 instance_idx = next(self.instance)
-            elif isinstance(instance, types.GeneratorType):
-                instance_idx = next(instance)
             elif isinstance(instance, int):
                 instance_idx = instance
             else:
@@ -126,6 +124,8 @@ class SGDEnv(gym.Env, EzPickle):
             torch.cuda.manual_seed_all(seed)
             rng = np.random.RandomState(seed)
 
+            instance = self.generator(rng)
+            assert isinstance(instance, Instance)
             (
                 self.dataset,
                 self.model,
@@ -135,7 +135,7 @@ class SGDEnv(gym.Env, EzPickle):
                 (train_loader, _),
                 self.steps,
                 self.crash_penalty,
-            ) = self.generator(rng)
+            ) = instance
 
         self._observation_space = spaces.Dict(
             {
