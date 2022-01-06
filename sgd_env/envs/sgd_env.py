@@ -38,17 +38,7 @@ class SGDEnv(gym.Env, EzPickle):
         self.device = device
         self.seed()
 
-        self.actions = [
-            (
-                "lr",
-                spaces.Box(low=0.0, high=np.inf, shape=(1,)),
-                utils.optimizer_action,
-            )
-        ]
-
-        self.action_space = spaces.Dict(
-            {name: space for name, space, _ in self.actions}
-        )
+        self.action_space = spaces.Box(low=0.0, high=np.inf, shape=(1,))
         self._observation_space = None
 
     @property
@@ -63,9 +53,8 @@ class SGDEnv(gym.Env, EzPickle):
             )
         return self._observation_space
 
-    def step(self, action: spaces.Dict):
-        for name, _, func in self.actions:
-            func(self.optimizer, name, action)
+    def step(self, action: float):
+        utils.optimizer_action(self.optimizer, "lr", {"lr": action})
         default_rng_state = torch.get_rng_state()
         torch.set_rng_state(self.env_rng_state)
         loss = utils.train(
