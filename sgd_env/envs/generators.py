@@ -1,5 +1,6 @@
 from collections import namedtuple
-from typing import Tuple, Any
+from typing import Tuple, Any, Protocol
+from functools import cache, partial
 
 import torch
 from torch import nn
@@ -7,6 +8,9 @@ import torch.nn.functional as F
 from torch.utils.data.dataloader import DataLoader
 from torchvision import datasets, transforms
 import numpy as np
+from ConfigSpace import ConfigurationSpace
+from ConfigSpace import UniformIntegerHyperparameter
+from ConfigSpace import UniformFloatHyperparameter
 
 
 Instance = namedtuple(
@@ -22,6 +26,21 @@ Instance = namedtuple(
         "crash_penalty",
     ],
 )
+
+
+class GeneratorFunc(Protocol):
+    def __call__(self, rng: np.random.RandomState, **kwargs: int) -> Instance:
+        ...
+
+
+@cache
+def default_configuration_space() -> ConfigurationSpace:
+    cs = ConfigurationSpace()
+    steps = UniformIntegerHyperparameter("steps", 300, 900)
+    learning_rate = UniformFloatHyperparameter("lr", 0.0001, 0.1, log=True)
+    batch_size = UniformIntegerHyperparameter("batch_size", 32, 256, log=True)
+    cs.add_hyperparameters([steps, learning_rate, batch_size])
+    return cs
 
 
 def random_feature_extractor(rng: np.random.RandomState, **kwargs) -> nn.Module:
@@ -72,27 +91,33 @@ def random_mnist_loader(rng: np.random.RandomState, **kwargs) -> Tuple[DataLoade
 
 
 def random_optimizer_parameters(rng, **kwargs):
-    lr = kwargs["learning_rate"].sample(rng)
-    return {"lr": lr}
+    return {"lr": kwargs["lr"]}
 
 
 def random_mnist_instance(rng: np.random.RandomState, **kwargs):
     model = random_mnist_model(rng, **kwargs)
-    batch_size = kwargs["batch_size"].sample(rng)
+    batch_size = kwargs["batch_size"]
     loaders = random_mnist_loader(rng, batch_size=batch_size)
     optimizer_params = random_optimizer_parameters(rng, **kwargs)
     loss = F.nll_loss
-    steps = kwargs["steps"].sample(rng)
+    steps = kwargs["steps"]
     crash_penalty = 0.0
     return model, optimizer_params, loss, batch_size, loaders, steps, crash_penalty
 
 
-def random_instance(rng: np.random.RandomState, **kwargs) -> Instance:
+def random_instance(rng: np.random.RandomState, cs: ConfigurationSpace) -> Instance:
     datasets = ["MNIST"]
+    cs.seed(rng.randint(1, 4294967295))
+    config = cs.sample_configuration()
     idx = rng.randint(low=0, high=len(datasets))
     dataset = datasets[idx]
     if dataset == "MNIST":
-        instance = random_mnist_instance(rng, **kwargs)
+        instance = random_mnist_instance(rng, **config)
     else:
         raise NotImplementedError
     return Instance(dataset, *instance)
+
+
+default_instance_generator: GeneratorFunc = partial(
+    random_instance, cs=default_configuration_space()
+)

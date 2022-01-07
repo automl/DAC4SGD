@@ -1,7 +1,5 @@
 from itertools import cycle, count
-from functools import partial
-from typing import Optional, Union, Iterator, Tuple, Protocol
-import types
+from typing import Optional, Union, Iterator, Tuple
 
 import gym
 from gym import spaces
@@ -10,26 +8,14 @@ from gym.utils import seeding, EzPickle
 import numpy as np
 import torch
 
-from .generators import Instance, random_instance
-from .hyperparameters import UniformIntegerHyperparameter
-from .hyperparameters import UniformFloatHyperparameter
+from .generators import Instance, default_instance_generator, GeneratorFunc
 from . import utils
-
-
-class GeneratorFunc(Protocol):
-    def __call__(self, rng: np.random.RandomState, **kwargs: int) -> Instance:
-        ...
 
 
 class SGDEnv(gym.Env, EzPickle):
     def __init__(
         self,
-        generator: GeneratorFunc = partial(
-            random_instance,
-            steps=UniformIntegerHyperparameter(300, 900),
-            learning_rate=UniformFloatHyperparameter(0.0001, 0.1, True),
-            batch_size=UniformIntegerHyperparameter(32, 256, True),
-        ),
+        generator: GeneratorFunc = default_instance_generator,
         n_instances: Union[int, float] = np.inf,
         device: str = "cpu",
     ):
