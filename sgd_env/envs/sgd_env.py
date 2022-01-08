@@ -55,8 +55,8 @@ class SGDEnv(gym.Env, EzPickle):
         self.env_rng_state.data = torch.get_rng_state()
         torch.set_rng_state(default_rng_state)
         crashed = (
-            torch.isnan(loss).any()
-            or torch.isnan(
+            torch.isfinite(loss).any()
+            or torch.isfinite(
                 torch.nn.utils.parameters_to_vector(self.model.parameters())
             ).any()
         ).item()
