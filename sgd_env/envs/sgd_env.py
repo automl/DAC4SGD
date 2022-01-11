@@ -55,11 +55,11 @@ class SGDEnv(gym.Env, EzPickle):
         self.env_rng_state.data = torch.get_rng_state()
         torch.set_rng_state(default_rng_state)
         crashed = (
-            torch.isfinite(loss).any()
-            or torch.isfinite(
+            not torch.isfinite(loss).any()
+            or not torch.isfinite(
                 torch.nn.utils.parameters_to_vector(self.model.parameters())
             ).any()
-        ).item()
+        )
         state = {"steps": self._step, "loss": loss, "crashed": crashed}
         done = self._step >= self.steps if not crashed else True
         reward = -loss.mean() if not crashed else self.crash_penalty
