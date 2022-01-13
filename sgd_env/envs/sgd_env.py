@@ -60,7 +60,7 @@ class SGDEnv(gym.Env, EzPickle):
                 torch.nn.utils.parameters_to_vector(self.model.parameters())
             ).any()
         )
-        state = {"steps": self._step, "loss": loss, "crashed": crashed}
+        state = {"step": self._step, "loss": loss, "crashed": crashed}
         done = self._step >= self.steps if not crashed else True
         reward = -loss.mean() if not crashed else self.crash_penalty
         return state, reward, done, {}
@@ -70,6 +70,7 @@ class SGDEnv(gym.Env, EzPickle):
         default_rng_state = torch.get_rng_state()
 
         if isinstance(instance, Instance):
+            self.instance = instance
             (
                 self.dataset,
                 self.model,
@@ -82,7 +83,7 @@ class SGDEnv(gym.Env, EzPickle):
             ) = instance
         else:
             if instance is None:
-                instance_idx = next(self.instance)
+                instance_idx = next(self.instance_count)
             elif isinstance(instance, int):
                 instance_idx = instance
             else:
@@ -99,8 +100,8 @@ class SGDEnv(gym.Env, EzPickle):
             torch.cuda.manual_seed_all(seed)
             rng = np.random.RandomState(seed)
 
-            instance = self.generator(rng)
-            assert isinstance(instance, Instance)
+            self.instance = self.generator(rng)
+            assert isinstance(self.instance, Instance)
             (
                 self.dataset,
                 self.model,
@@ -110,11 +111,11 @@ class SGDEnv(gym.Env, EzPickle):
                 (train_loader, _),
                 self.steps,
                 self.crash_penalty,
-            ) = instance
+            ) = self.instance
 
         self._observation_space = spaces.Dict(
             {
-                "steps": spaces.Box(0, self.steps, (1,)),
+                "step": spaces.Box(0, self.steps, (1,)),
                 "loss": spaces.Box(0, np.inf, (self.batch_size,)),
                 "crashed": spaces.Discrete(1),
             }
@@ -134,7 +135,7 @@ class SGDEnv(gym.Env, EzPickle):
         loss = self.loss(output, target, reduction="none")
         self.env_rng_state: torch.Tensor = torch.get_rng_state()
         torch.set_rng_state(default_rng_state)
-        return {"steps": 0, "loss": loss, "crashed": False}
+        return {"step": 0, "loss": loss, "crashed": False}
 
     def seed(self, seed=None):
         self.np_random, seed = seeding.np_random(seed)
@@ -142,7 +143,7 @@ class SGDEnv(gym.Env, EzPickle):
         torch.backends.cudnn.deterministic = True
         self.instance_seeds = []
         if self.n_instances == np.inf:
-            self.instance = count(start=0, step=1)
+            self.instance_count = count(start=0, step=1)
         else:
-            self.instance = cycle(range(self.n_instances))
+            self.instance_count = cycle(range(self.n_instances))
         return [seed]
