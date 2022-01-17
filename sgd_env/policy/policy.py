@@ -2,6 +2,7 @@ import dataclasses
 from abc import ABC, abstractmethod
 from ast import literal_eval
 from typing import Optional
+import json
 
 import numpy as np
 
@@ -27,64 +28,47 @@ class AbstractPolicy(ABC):
         ...
 
 
-@dataclasses.dataclass
-class ConstantLRPolicy(AbstractPolicy):
-    lr: float
+class Serializable:
+    def save(self, f):
+        json.dump(dataclasses.asdict(self), f)
 
-    def __post_init__(self):
-        assert self.lr > 0
+    @classmethod
+    def load(cls, f):
+        return cls(**json.load(f))
+
+
+@dataclasses.dataclass
+class ConstantLRPolicy(Serializable, AbstractPolicy):
+    lr: float
 
     def act(self, _):
         return self.lr
-
-    def load(self):
-        return str(dataclasses.asdict(self))
-
-    @classmethod
-    def save(cls, pi_str):
-        return cls(**literal_eval(pi_str))
 
     def reset(self, _):
         pass
 
 
 @dataclasses.dataclass
-class CosineAnnealingLRPolicy(AbstractPolicy):
+class CosineAnnealingLRPolicy(Serializable, AbstractPolicy):
     lr: float
-    steps: int = dataclasses.field(init=False)
-
-    def __post_init__(self):
-        assert self.lr > 0
+    steps: Optional[int] = None
 
     def act(self, state):
         return 0.5 * (1 + np.cos(state["step"] * np.pi / self.steps)) * self.lr
 
-    def load(self):
-        return str(dataclasses.asdict(self))
-
-    @classmethod
-    def save(cls, pi_str):
-        return cls(**literal_eval(pi_str))
-
     def reset(self, instance: generators.Instance):
         self.steps = instance.steps
-        assert self.steps > 0
 
 
 @dataclasses.dataclass
-class SimplePolicy(AbstractPolicy):
+class SimplePolicy(Serializable, AbstractPolicy):
     lr: float
     a: float
     b: float
-    steps: int = dataclasses.field(init=False)
-    loss: float = dataclasses.field(init=False)
-    prev_loss: Optional[float] = dataclasses.field(init=False)
-    epoch_size: int = dataclasses.field(init=False)
-
-    def __post_init__(self):
-        assert self.lr > 0
-        assert 0 < self.a <= 1
-        assert 0 < self.b <= 1
+    steps: Optional[int] = None
+    loss: Optional[float] = None
+    prev_loss: Optional[float] = None
+    epoch_size: Optional[int] = None
 
     def act(self, state):
         self.loss += state['loss'].sum()
@@ -94,13 +78,6 @@ class SimplePolicy(AbstractPolicy):
             self.prev_loss = self.loss
             self.loss = 0.0
         return self.lr
-
-    def load(self):
-        return str(dataclasses.asdict(self))
-
-    @classmethod
-    def save(cls, pi_str):
-        return cls(**literal_eval(pi_str))
 
     def reset(self, instance: generators.Instance):
         self.steps = instance.steps
