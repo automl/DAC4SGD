@@ -1,6 +1,5 @@
 import dataclasses
 from abc import ABC, abstractmethod
-from ast import literal_eval
 from typing import Optional
 import json
 
@@ -71,10 +70,10 @@ class SimplePolicy(Serializable, AbstractPolicy):
     epoch_size: Optional[int] = None
 
     def act(self, state):
-        self.loss += state['loss'].sum()
-        if not (state['step'] + 1) % self.epoch_size:
+        self.loss += state["loss"].sum()
+        if not (state["step"] + 1) % self.epoch_size:
             if self.prev_loss is not None:
-                self.lr *= self.a if self.loss > self.prev_loss else 1/self.b
+                self.lr *= self.a if self.loss > self.prev_loss else 1 / self.b
             self.prev_loss = self.loss
             self.loss = 0.0
         return self.lr
