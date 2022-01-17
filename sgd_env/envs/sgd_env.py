@@ -8,8 +8,8 @@ from gym.utils import seeding, EzPickle
 import numpy as np
 import torch
 
-from .generators import Instance, default_instance_generator, GeneratorFunc
-from . import utils
+from sgd_env.envs.generators import Instance, default_instance_generator, GeneratorFunc
+from sgd_env.envs import utils
 
 
 class SGDEnv(gym.Env, EzPickle):
