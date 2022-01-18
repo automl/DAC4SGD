@@ -64,8 +64,7 @@ class SimplePolicy(Serializable, AbstractPolicy):
     lr: float
     a: float
     b: float
-    steps: Optional[int] = None
-    loss: Optional[float] = None
+    loss: float = 0.0
     prev_loss: Optional[float] = None
     epoch_size: Optional[int] = None
 
@@ -79,7 +78,6 @@ class SimplePolicy(Serializable, AbstractPolicy):
         return self.lr
 
     def reset(self, instance: generators.Instance):
-        self.steps = instance.steps
         self.loss = 0.0
         self.prev_loss = None
         self.epoch_size = len(instance.loaders[0])
