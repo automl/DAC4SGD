@@ -1,6 +1,6 @@
 from collections import namedtuple
 from typing import Tuple, Any, Protocol
-from functools import cache, partial
+from functools import partial, lru_cache
 
 import torch
 from torch import nn
@@ -33,7 +33,7 @@ class GeneratorFunc(Protocol):
         ...
 
 
-@cache
+@lru_cache(maxsize=None)
 def default_configuration_space() -> ConfigurationSpace:
     cs = ConfigurationSpace()
     steps = UniformIntegerHyperparameter("steps", 300, 900)
@@ -101,13 +101,13 @@ def random_mnist_instance(rng: np.random.RandomState, **kwargs):
     optimizer_params = random_optimizer_parameters(rng, **kwargs)
     loss = F.nll_loss
     steps = kwargs["steps"]
-    crash_penalty = 0.0
+    crash_penalty = np.log(0.1) * steps
     return model, optimizer_params, loss, batch_size, loaders, steps, crash_penalty
 
 
 def random_instance(rng: np.random.RandomState, cs: ConfigurationSpace) -> Instance:
     datasets = ["MNIST"]
-    cs.seed(rng.randint(1, 4294967295))
+    cs.seed(rng.randint(1, 4294967295, dtype=np.int64))
     config = cs.sample_configuration()
     idx = rng.randint(low=0, high=len(datasets))
     dataset = datasets[idx]

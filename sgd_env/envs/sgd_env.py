@@ -62,7 +62,7 @@ class SGDEnv(gym.Env, EzPickle):
         )
         state = {"step": self._step, "loss": loss, "crashed": crashed}
         done = self._step >= self.steps if not crashed else True
-        reward = -loss.mean() if not crashed else self.crash_penalty
+        reward = -loss.mean().item() if not crashed else self.crash_penalty
         return state, reward, done, {}
 
     def reset(self, instance: Optional[Union[Instance, int]] = None):
@@ -91,7 +91,7 @@ class SGDEnv(gym.Env, EzPickle):
 
             assert instance_idx < self.n_instances
             while instance_idx >= len(self.instance_seeds):
-                seed = self.np_random.randint(1, 4294967295)
+                seed = self.np_random.randint(1, 4294967295, dtype=np.int64)
                 self.instance_seeds.append(seed)
 
             seed = self.instance_seeds[instance_idx]
