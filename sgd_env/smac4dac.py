@@ -20,6 +20,7 @@ shared_dict = {}
 
 SEED = 42
 
+
 def evaluate_cost(cfg, seed, instance, **kwargs):
     global shared_dict
 
@@ -31,7 +32,9 @@ def evaluate_cost(cfg, seed, instance, **kwargs):
         policy = policy_class(**cfg)
 
         obs = env.reset(instance_idx)
-        policy.reset(env.instance)  # TODO: hack to get to the actual instance / modify interface to support this
+        policy.reset(
+            env.instance
+        )  # TODO: hack to get to the actual instance / modify interface to support this
         done = False
         total_reward = 0
         print("instance: {}, config: {}".format(env.instance, cfg))
@@ -46,7 +49,7 @@ def evaluate_cost(cfg, seed, instance, **kwargs):
         crashed = True
 
     cost = -(total_reward if not crashed else env.instance.crash_penalty)
-    print('> cost: {}'.format(cost))
+    print("> cost: {}".format(cost))
     return cost
 
 
@@ -56,13 +59,17 @@ def main():
     # 1. Specify training env
     generator = default_instance_generator
     n_training_instances = 1000  # number of instances
-    train_env = SGDEnv(generator=default_instance_generator, n_instances=n_training_instances)
+    train_env = SGDEnv(
+        generator=default_instance_generator, n_instances=n_training_instances
+    )
 
     # 2. Specify policy space
     policy_class = ConstantLRPolicy  # parametric policy family
 
     cs = ConfigurationSpace()  # config space
-    cs.add_hyperparameter(UniformFloatHyperparameter('lr', lower=0.000001, upper=10, log=True))
+    cs.add_hyperparameter(
+        UniformFloatHyperparameter("lr", lower=0.000001, upper=10, log=True)
+    )
 
     # Specify AC Scenario
     scenario_dict = {}
@@ -80,7 +87,12 @@ def main():
     shared_dict = {"env": train_env, "policy_class": policy_class}
 
     # create/run SMAC
-    smac = SMAC4AC(scenario=scenario, rng=SEED, tae_runner=evaluate_cost, initial_design=RandomConfigurations)
+    smac = SMAC4AC(
+        scenario=scenario,
+        rng=SEED,
+        tae_runner=evaluate_cost,
+        initial_design=RandomConfigurations,
+    )
 
     incumbent = smac.optimize()
 
@@ -90,5 +102,5 @@ def main():
         incumbent_policy.save(fh)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()
