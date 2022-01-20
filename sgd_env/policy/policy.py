@@ -10,7 +10,7 @@ from sgd_env import generators
 
 class AbstractPolicy(ABC):
     @abstractmethod
-    def act(self, observation):
+    def act(self, state):
         ...
 
     @abstractmethod
@@ -50,7 +50,6 @@ class ConstantLRPolicy(Serializable, AbstractPolicy):
 @dataclasses.dataclass
 class CosineAnnealingLRPolicy(Serializable, AbstractPolicy):
     lr: float
-    steps: Optional[int] = None
 
     def act(self, state):
         return 0.5 * (1 + np.cos(state["step"] * np.pi / self.steps)) * self.lr
@@ -64,20 +63,18 @@ class SimplePolicy(Serializable, AbstractPolicy):
     lr: float
     a: float
     b: float
-    loss: float = 0.0
-    prev_loss: Optional[float] = None
-    epoch_size: Optional[int] = None
 
     def act(self, state):
         self.loss += state["loss"].sum()
         if not (state["step"] + 1) % self.epoch_size:
             if self.prev_loss is not None:
-                self.lr *= self.a if self.loss > self.prev_loss else 1 / self.b
+                self.lr_t *= self.a if self.loss > self.prev_loss else 1 / self.b
             self.prev_loss = self.loss
             self.loss = 0.0
-        return self.lr
+        return self.lr_t
 
     def reset(self, instance: generators.Instance):
+        self.lr_t = self.lr
         self.loss = 0.0
         self.prev_loss = None
         self.epoch_size = len(instance.loaders[0])
