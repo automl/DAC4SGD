@@ -43,14 +43,19 @@ class SGDEnv(gym.Env, EzPickle):
         utils.optimizer_action(self.optimizer, "lr", {"lr": action})
         default_rng_state = torch.get_rng_state()
         torch.set_rng_state(self.env_rng_state)
-        loss = utils.train(
+        train_args = [
             self.model,
             self.optimizer,
             self.loss,
-            self.train_loader,
+            self.train_iter,
             1,
             self.device,
-        )
+        ]
+        try:
+            loss = utils.train(*train_args)
+        except StopIteration:
+            self.train_iter = iter(self.train_loader)
+            loss = utils.train(*train_args)
         self._step += 1
         self.env_rng_state.data = torch.get_rng_state()
         torch.set_rng_state(default_rng_state)
@@ -77,7 +82,7 @@ class SGDEnv(gym.Env, EzPickle):
                 optimizer_params,
                 self.loss,
                 self.batch_size,
-                (train_loader, _),
+                (self.train_loader, _),
                 self.steps,
                 self.crash_penalty,
             ) = instance
@@ -108,7 +113,7 @@ class SGDEnv(gym.Env, EzPickle):
                 optimizer_params,
                 self.loss,
                 self.batch_size,
-                (train_loader, _),
+                (self.train_loader, _),
                 self.steps,
                 self.crash_penalty,
             ) = self.instance
@@ -121,15 +126,15 @@ class SGDEnv(gym.Env, EzPickle):
             }
         )
 
-        self.train_loader: Iterator[Tuple[torch.Tensor, torch.Tensor]] = iter(
-            train_loader
+        self.train_iter: Iterator[Tuple[torch.Tensor, torch.Tensor]] = iter(
+            self.train_loader
         )
         self.model.to(self.device)
         self.optimizer: torch.optim.Optimizer = torch.optim.AdamW(
             **optimizer_params, params=self.model.parameters()
         )
         self.model.eval()
-        (data, target) = next(self.train_loader)
+        (data, target) = next(self.train_iter)
         data, target = data.to(self.device), target.to(self.device)
         output = self.model(data)
         loss = self.loss(output, target, reduction="none")
