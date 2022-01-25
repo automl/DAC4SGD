@@ -38,8 +38,8 @@ def default_configuration_space() -> ConfigurationSpace:
     cs = ConfigurationSpace()
     steps = UniformIntegerHyperparameter("steps", 300, 900)
     learning_rate = UniformFloatHyperparameter("lr", 0.0001, 0.1, log=True)
-    batch_size = UniformIntegerHyperparameter("batch_size", 32, 256, log=True)
-    cs.add_hyperparameters([steps, learning_rate, batch_size])
+    batch_size_exp = UniformIntegerHyperparameter("batch_size_exp", 3, 16, log=True)
+    cs.add_hyperparameters([steps, learning_rate, batch_size_exp])
     return cs
 
 
@@ -96,7 +96,7 @@ def random_optimizer_parameters(rng, **kwargs):
 
 def random_mnist_instance(rng: np.random.RandomState, **kwargs):
     model = random_mnist_model(rng, **kwargs)
-    batch_size = kwargs["batch_size"]
+    batch_size = 2 ** kwargs["batch_size_exp"]
     loaders = random_mnist_loader(rng, batch_size=batch_size)
     optimizer_params = random_optimizer_parameters(rng, **kwargs)
     loss = F.nll_loss
