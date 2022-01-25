@@ -80,7 +80,7 @@ class ReduceLROnPlateauPolicy(Serializable, AbstractPolicy):
     def reset(self, _):
         scheduler_params = dataclasses.asdict(self)
         scheduler_params.pop("lr", None)
-        self.optimizer = torch.optim.SGD(torch.nn.Linear(1, 1).parameters(), self.lr)
+        self.optimizer = torch.optim.SGD([torch.nn.Parameter(torch.tensor(0.0))], self.lr)
         self.scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(
             self.optimizer, **scheduler_params
         )
