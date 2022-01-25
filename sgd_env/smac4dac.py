@@ -57,7 +57,6 @@ def main():
     global shared_dict
 
     # 1. Specify training env
-    generator = default_instance_generator
     n_training_instances = 1000  # number of instances
     train_env = SGDEnv(
         generator=default_instance_generator, n_instances=n_training_instances

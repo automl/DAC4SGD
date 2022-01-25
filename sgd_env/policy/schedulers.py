@@ -74,8 +74,8 @@ class ReduceLROnPlateauPolicy(Serializable, AbstractPolicy):
     eps: float = 1e-8
 
     def act(self, state):
-        self.scheduler.step(state['loss'].mean())
-        return self.optimizer.param_groups[0]['lr']
+        self.scheduler.step(state["loss"].mean())
+        return self.optimizer.param_groups[0]["lr"]
 
     def reset(self, _):
         scheduler_params = dataclasses.asdict(self)

@@ -21,7 +21,7 @@ def create_ffn_layers(
         layers.append(nn.Linear(layer1, layer2, bias=bias))
         if act is not None:
             if idx < len(layer_sizes) - 2:
-                layers.append(hidden_act())
+                layers.append(act())
     return layers
 
 
