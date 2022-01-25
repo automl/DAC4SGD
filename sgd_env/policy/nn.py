@@ -85,6 +85,6 @@ class RNN(AbstractNetworkPolicy):
 
     def reset(self, _):
         self.hidden = (
-            torch.randn(1, 1, self.hidden_size),
-            torch.randn(1, 1, self.hidden_size),
+            torch.zeros(1, 1, self.hidden_size),
+            torch.zeros(1, 1, self.hidden_size),
         )
