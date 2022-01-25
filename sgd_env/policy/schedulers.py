@@ -1,7 +1,9 @@
+from typing import Union, List
 import dataclasses
 import json
 
 import numpy as np
+import torch.optim
 
 from sgd_env.policy import AbstractPolicy
 
@@ -57,3 +59,28 @@ class SimplePolicy(Serializable, AbstractPolicy):
         self.loss = 0.0
         self.prev_loss = None
         self.epoch_size = len(instance.loaders[0])
+
+
+@dataclasses.dataclass
+class ReduceLROnPlateauPolicy(Serializable, AbstractPolicy):
+    lr: float
+    mode: str = "min"
+    factor: float = 0.1
+    patience: int = 10
+    threshold: float = 1e-4
+    threshold_mode: str = "rel"
+    cooldown: int = 0
+    min_lr: Union[float, List[float]] = 0
+    eps: float = 1e-8
+
+    def act(self, state):
+        self.scheduler.step(state['loss'].mean())
+        return self.optimizer.param_groups[0]['lr']
+
+    def reset(self, _):
+        scheduler_params = dataclasses.asdict(self)
+        scheduler_params.pop("lr", None)
+        self.optimizer = torch.optim.SGD(torch.nn.Linear(1, 1).parameters(), self.lr)
+        self.scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(
+            self.optimizer, **scheduler_params
+        )
