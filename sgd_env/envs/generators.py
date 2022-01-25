@@ -1,6 +1,12 @@
 from collections import namedtuple
-from typing import Tuple, Any, Protocol
+import sys
+from typing import Tuple, Any
 from functools import partial, lru_cache
+
+if sys.version_info.minor >= 8:
+    from typing import Protocol
+else:
+    from typing_extensions import Protocol  # type: ignore
 
 import torch
 from torch import nn
@@ -59,7 +65,9 @@ def random_feature_extractor(rng: np.random.RandomState, **kwargs) -> nn.Module:
 
 def random_mnist_model(rng: np.random.RandomState, **kwargs) -> nn.Module:
     f = random_feature_extractor(rng)
-    n_features = torch.prod(torch.tensor(f(torch.zeros((1, 1, 28, 28))).shape))
+    n_features = int(
+        torch.prod(torch.tensor(f(torch.zeros((1, 1, 28, 28))).shape)).item()
+    )
     return nn.Sequential(f, nn.Flatten(1), nn.Linear(n_features, 10), nn.LogSoftmax(1))
 
 

@@ -4,6 +4,7 @@ than the target algorithm.
 Note: This code does not work on Windows (SMAC 3 does not support Windows)
 """
 import traceback
+from typing import Dict, Any
 
 from ConfigSpace.configuration_space import ConfigurationSpace
 from ConfigSpace.hyperparameters import UniformFloatHyperparameter
@@ -16,7 +17,7 @@ from sgd_env.envs.generators import default_instance_generator
 from sgd_env.policy import ConstantLRPolicy
 
 # dict shared between smac config evaluations
-shared_dict = {}
+shared_dict: Dict[str, Any] = {}
 
 SEED = 42
 

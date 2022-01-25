@@ -26,6 +26,7 @@ class SGDEnv(gym.Env, EzPickle):
 
         self.action_space = spaces.Box(low=0.0, high=np.inf, shape=(1,))
         self._observation_space = None
+        self.train_iter: Iterator[Tuple[torch.Tensor, torch.Tensor]]
 
     @property
     def observation_space(self):
@@ -126,9 +127,7 @@ class SGDEnv(gym.Env, EzPickle):
             }
         )
 
-        self.train_iter: Iterator[Tuple[torch.Tensor, torch.Tensor]] = iter(
-            self.train_loader
-        )
+        self.train_iter = iter(self.train_loader)
         self.model.to(self.device)
         self.optimizer: torch.optim.Optimizer = torch.optim.AdamW(
             **optimizer_params, params=self.model.parameters()
