@@ -33,7 +33,7 @@ class SGDEnv(gym.Env, EzPickle):
             raise ValueError(
                 "Observation space changes for every instance. "
                 "It is set after every reset. "
-                "Use a provided wrapper or handle it manually."
+                "Use a provided wrapper or handle it manually. "
                 "If batch size is fixed for every instance, "
                 "observation space will stay fixed."
             )

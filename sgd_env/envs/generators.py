@@ -38,46 +38,29 @@ def default_configuration_space() -> ConfigurationSpace:
     cs = ConfigurationSpace()
     cutoff = UniformIntegerHyperparameter("cutoff", 300, 900)
     learning_rate = UniformFloatHyperparameter("lr", 0.0001, 0.1, log=True)
-    batch_size_exp = UniformIntegerHyperparameter("batch_size_exp", 3, 16, log=True)
+    batch_size_exp = UniformIntegerHyperparameter("batch_size_exp", 2, 16, log=True)
     cs.add_hyperparameters([cutoff, learning_rate, batch_size_exp])
     return cs
 
 
 def random_feature_extractor(rng: np.random.RandomState, **kwargs) -> nn.Module:
-    conv1 = rng.randint(low=16, high=129)
-    conv2 = rng.randint(low=16, high=129)
+    conv1 = int(np.exp(rng.uniform(low=np.log(2), high=np.log(9))))
+    conv2 = int(np.exp(rng.uniform(low=np.log(6), high=np.log(24))))
+    conv3 = int(np.exp(rng.uniform(low=np.log(32), high=np.log(256))))
     return nn.Sequential(
         nn.Conv2d(1, conv1, 3, 1),
-        nn.ReLU(),
-        nn.Conv2d(conv1, conv2, 3, 1),
-        nn.ReLU(),
         nn.MaxPool2d(2),
-        nn.Dropout(0.25),
+        nn.Conv2d(conv1, conv2, 3, 1),
+        nn.MaxPool2d(2),
+        nn.Conv2d(conv2, conv3, 3, 1),
+        nn.ReLU(),
     )
 
 
 def random_mnist_model(rng: np.random.RandomState, **kwargs) -> nn.Module:
-    class MNISTModel(nn.Module):
-        def __init__(self):
-            super().__init__()
-            self.f = random_feature_extractor(rng)
-            shape = self.f(torch.zeros((1, 1, 28, 28))).shape
-            n_features = torch.prod(torch.tensor(shape))
-            self.fc1 = nn.Linear(n_features, 128)
-            self.fc2 = nn.Linear(128, 10)
-            self.dropout = nn.Dropout(0.50)
-
-        def forward(self, x):
-            x = self.f(x)
-            x = torch.flatten(x, 1)
-            x = self.fc1(x)
-            x = F.relu(x)
-            x = self.dropout(x)
-            x = self.fc2(x)
-            output = F.log_softmax(x, dim=1)
-            return output
-
-    return MNISTModel()
+    f = random_feature_extractor(rng)
+    n_features = torch.prod(torch.tensor(f(torch.zeros((1, 1, 28, 28))).shape))
+    return nn.Sequential(f, nn.Flatten(1), nn.Linear(n_features, 10), nn.LogSoftmax(1))
 
 
 def random_mnist_loader(rng: np.random.RandomState, **kwargs) -> Tuple[DataLoader, Any]:
