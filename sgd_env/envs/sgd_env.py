@@ -66,7 +66,7 @@ class SGDEnv(gym.Env, EzPickle):
             ).any()
         )
         state = {"step": self._step, "loss": loss, "crashed": crashed}
-        done = self._step >= self.steps if not crashed else True
+        done = self._step >= self.cutoff if not crashed else True
         reward = -loss.mean().item() if not crashed else self.crash_penalty
         return state, reward, done, {}
 
@@ -83,7 +83,7 @@ class SGDEnv(gym.Env, EzPickle):
                 self.loss,
                 self.batch_size,
                 (self.train_loader, _),
-                self.steps,
+                self.cutoff,
                 self.crash_penalty,
             ) = instance
         else:
@@ -114,13 +114,13 @@ class SGDEnv(gym.Env, EzPickle):
                 self.loss,
                 self.batch_size,
                 (self.train_loader, _),
-                self.steps,
+                self.cutoff,
                 self.crash_penalty,
             ) = self.instance
 
         self._observation_space = spaces.Dict(
             {
-                "step": spaces.Box(0, self.steps, (1,)),
+                "step": spaces.Box(0, self.cutoff, (1,)),
                 "loss": spaces.Box(0, np.inf, (self.batch_size,)),
                 "crashed": spaces.Discrete(1),
             }

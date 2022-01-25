@@ -33,10 +33,10 @@ class CosineAnnealingLRPolicy(Serializable, AbstractPolicy):
     lr: float
 
     def act(self, state):
-        return 0.5 * (1 + np.cos(state["step"] * np.pi / self.steps)) * self.lr
+        return 0.5 * (1 + np.cos(state["step"] * np.pi / self.cutoff)) * self.lr
 
     def reset(self, instance):
-        self.steps = instance.steps
+        self.cutoff = instance.cutoff
 
 
 @dataclasses.dataclass

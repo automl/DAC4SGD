@@ -22,7 +22,7 @@ Instance = namedtuple(
         "loss",
         "batch_size",
         "loaders",
-        "steps",
+        "cutoff",
         "crash_penalty",
     ],
 )
@@ -36,10 +36,10 @@ class GeneratorFunc(Protocol):
 @lru_cache(maxsize=None)
 def default_configuration_space() -> ConfigurationSpace:
     cs = ConfigurationSpace()
-    steps = UniformIntegerHyperparameter("steps", 300, 900)
+    cutoff = UniformIntegerHyperparameter("cutoff", 300, 900)
     learning_rate = UniformFloatHyperparameter("lr", 0.0001, 0.1, log=True)
     batch_size_exp = UniformIntegerHyperparameter("batch_size_exp", 3, 16, log=True)
-    cs.add_hyperparameters([steps, learning_rate, batch_size_exp])
+    cs.add_hyperparameters([cutoff, learning_rate, batch_size_exp])
     return cs
 
 
@@ -100,9 +100,9 @@ def random_mnist_instance(rng: np.random.RandomState, **kwargs):
     loaders = random_mnist_loader(rng, batch_size=batch_size)
     optimizer_params = random_optimizer_parameters(rng, **kwargs)
     loss = F.nll_loss
-    steps = kwargs["steps"]
-    crash_penalty = np.log(0.1) * steps
-    return model, optimizer_params, loss, batch_size, loaders, steps, crash_penalty
+    cutoff = kwargs["cutoff"]
+    crash_penalty = np.log(0.1) * cutoff
+    return model, optimizer_params, loss, batch_size, loaders, cutoff, crash_penalty
 
 
 def random_instance(rng: np.random.RandomState, cs: ConfigurationSpace) -> Instance:
