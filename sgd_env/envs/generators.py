@@ -71,6 +71,20 @@ def random_mnist_model(rng: np.random.RandomState, **kwargs) -> nn.Module:
     return nn.Sequential(f, nn.Flatten(1), nn.Linear(n_features, 10), nn.LogSoftmax(1))
 
 
+def random_mlp_mnist_model(rng: np.random.RandomState, **kwargs) -> nn.Module:
+    l1 = 129 - int(np.exp(rng.uniform(low=np.log(1), high=np.log(128))))
+    l2 = 65 - int(np.exp(rng.uniform(low=np.log(1), high=np.log(64))))
+    return nn.Sequential(
+        nn.Flatten(1),
+        nn.Linear(784, l1),
+        nn.ReLU(),
+        nn.Linear(l1, l2),
+        nn.ReLU(),
+        nn.Linear(l2, 10),
+        nn.LogSoftmax(1),
+    )
+
+
 def random_mnist_loader(rng: np.random.RandomState, **kwargs) -> Tuple[DataLoader, Any]:
     transform = transforms.Compose(
         [transforms.ToTensor(), transforms.Normalize((0.1307,), (0.3081,))]
@@ -86,7 +100,14 @@ def random_optimizer_parameters(rng, **kwargs):
 
 
 def random_mnist_instance(rng: np.random.RandomState, **kwargs):
-    model = random_mnist_model(rng, **kwargs)
+    model_types = ["CNN", "MLP"]
+    model_type = model_types[rng.randint(low=0, high=len(model_types))]
+    if model_type == "CNN":
+        model = random_mnist_model(rng, **kwargs)
+    elif model_type == "MLP":
+        model = random_mlp_mnist_model(rng, **kwargs)
+    else:
+        raise NotImplementedError
     batch_size = 2 ** kwargs["batch_size_exp"]
     loaders = random_mnist_loader(rng, batch_size=batch_size)
     optimizer_params = random_optimizer_parameters(rng, **kwargs)
