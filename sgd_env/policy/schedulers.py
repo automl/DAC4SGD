@@ -83,7 +83,7 @@ class ReduceLROnPlateauPolicy(Serializable, AbstractPolicy):
         )
 
     @staticmethod
-    def __create_scheduler(lr, **scheduler_params):
+    def __create_scheduler(*, lr, **scheduler_params):
         optimizer = torch.optim.SGD([torch.nn.Parameter(torch.tensor(0.0))], lr)
         scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(
             optimizer, **scheduler_params

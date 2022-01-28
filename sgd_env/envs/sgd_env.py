@@ -56,6 +56,7 @@ class SGDEnv(gym.Env, EzPickle):
             loss = utils.train(*train_args)
         except StopIteration:
             self.train_iter = iter(self.train_loader)
+            train_args[3] = self.train_iter
             loss = utils.train(*train_args)
         self._step += 1
         self.env_rng_state.data = torch.get_rng_state()
