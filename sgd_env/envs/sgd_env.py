@@ -104,17 +104,11 @@ class SGDEnv(gym.Env, EzPickle):
                 raise NotImplementedError
 
             assert instance_idx < self.n_instances
-            while instance_idx >= len(self.instance_seeds):
-                seed = self.np_random.randint(1, 4294967295, dtype=np.int64)
-                self.instance_seeds.append(seed)
 
-            seed = self.instance_seeds[instance_idx]
+            self.instance, seed = utils.get_instance(self.generator, instance_idx, self.np_random)
             torch.manual_seed(seed)
             torch.cuda.manual_seed(seed)
             torch.cuda.manual_seed_all(seed)
-            rng = np.random.RandomState(seed)
-
-            self.instance = self.generator(rng)
             assert isinstance(self.instance, Instance)
             (
                 self.dataset,
@@ -153,7 +147,6 @@ class SGDEnv(gym.Env, EzPickle):
         self.np_random, seed = seeding.np_random(seed)
         torch.backends.cudnn.benchmark = False
         torch.backends.cudnn.deterministic = True
-        self.instance_seeds = []
         if self.n_instances == np.inf:
             self.instance_count = count(start=0, step=1)
         else:
