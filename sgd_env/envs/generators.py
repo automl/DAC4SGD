@@ -44,7 +44,7 @@ def default_configuration_space() -> ConfigurationSpace:
     cs = ConfigurationSpace()
     cutoff = UniformIntegerHyperparameter("cutoff", 300, 900)
     learning_rate = UniformFloatHyperparameter("lr", 0.0001, 0.1, log=True)
-    batch_size_exp = UniformIntegerHyperparameter("batch_size_exp", 2, 16, log=True)
+    batch_size_exp = UniformIntegerHyperparameter("batch_size_exp", 2, 8, log=True)
     cs.add_hyperparameters([cutoff, learning_rate, batch_size_exp])
     return cs
 
