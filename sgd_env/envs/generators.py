@@ -17,6 +17,7 @@ import numpy as np
 from ConfigSpace import ConfigurationSpace
 from ConfigSpace import UniformIntegerHyperparameter
 from ConfigSpace import UniformFloatHyperparameter
+from ConfigSpace import Constant
 
 
 Instance = namedtuple(
@@ -45,7 +46,8 @@ def default_configuration_space() -> ConfigurationSpace:
     cutoff = UniformIntegerHyperparameter("cutoff", 300, 900)
     learning_rate = UniformFloatHyperparameter("lr", 0.0001, 0.1, log=True)
     batch_size_exp = UniformIntegerHyperparameter("batch_size_exp", 2, 8, log=True)
-    cs.add_hyperparameters([cutoff, learning_rate, batch_size_exp])
+    train_val = Constant("train_validation_ratio", 0.99)
+    cs.add_hyperparameters([cutoff, learning_rate, batch_size_exp, train_val])
     return cs
 
 
@@ -89,10 +91,18 @@ def random_mnist_loader(rng: np.random.RandomState, **kwargs) -> Tuple[DataLoade
     transform = transforms.Compose(
         [transforms.ToTensor(), transforms.Normalize((0.1307,), (0.3081,))]
     )
-    train_kwargs = {"batch_size": kwargs["batch_size"]}
+    train_kwargs = {"batch_size": 2 ** kwargs["batch_size_exp"]}
+    val_kwargs = {"batch_size": 64}
     dataset1 = datasets.MNIST("data", train=True, download=True, transform=transform)
-    train_loader = DataLoader(dataset1, **train_kwargs)
-    return (train_loader, None)
+    if "dataset_subset" in kwargs:
+        dataset1 = torch.utils.data.Subset(dataset1, kwargs["dataset_subset"])
+    train_size = int(len(dataset1) * kwargs["train_validation_ratio"])
+    train, val = torch.utils.data.random_split(
+        dataset1, [train_size, len(dataset1) - train_size]
+    )
+    train_loader = DataLoader(train, **train_kwargs)
+    val_loader = DataLoader(val, **val_kwargs)
+    return (train_loader, val_loader)
 
 
 def random_optimizer_parameters(rng, **kwargs):
@@ -109,7 +119,7 @@ def random_mnist_instance(rng: np.random.RandomState, **kwargs):
     else:
         raise NotImplementedError
     batch_size = 2 ** kwargs["batch_size_exp"]
-    loaders = random_mnist_loader(rng, batch_size=batch_size)
+    loaders = random_mnist_loader(rng, **kwargs)
     optimizer_params = random_optimizer_parameters(rng, **kwargs)
     loss = F.nll_loss
     cutoff = kwargs["cutoff"]
@@ -117,16 +127,24 @@ def random_mnist_instance(rng: np.random.RandomState, **kwargs):
     return model, optimizer_params, loss, batch_size, loaders, cutoff, crash_penalty
 
 
-def random_instance(rng: np.random.RandomState, cs: ConfigurationSpace) -> Instance:
+def random_instance(
+    rng: np.random.RandomState, cs: ConfigurationSpace, **kwargs
+) -> Instance:
     datasets = ["MNIST"]
-    cs.seed(rng.randint(1, 4294967295, dtype=np.int64))
+    default_rng_state = torch.get_rng_state()
+    seed = rng.randint(1, 4294967295, dtype=np.int64)
+    cs.seed(seed)
+    torch.manual_seed(seed)
+    torch.cuda.manual_seed(seed)
+    torch.cuda.manual_seed_all(seed)
     config = cs.sample_configuration()
     idx = rng.randint(low=0, high=len(datasets))
     dataset = datasets[idx]
     if dataset == "MNIST":
-        instance = random_mnist_instance(rng, **config)
+        instance = random_mnist_instance(rng, **config, **kwargs)
     else:
         raise NotImplementedError
+    torch.set_rng_state(default_rng_state)
     return Instance(dataset, *instance)
 
 

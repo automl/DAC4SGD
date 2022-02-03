@@ -69,7 +69,14 @@ class SGDEnv(gym.Env, EzPickle):
         )
         state = {"step": self._step, "loss": loss, "crashed": crashed}
         done = self._step >= self.cutoff if not crashed else True
-        reward = -loss.mean().item() if not crashed else self.crash_penalty
+        if crashed:
+            reward = self.crash_penalty
+        elif done:
+            reward = -utils.test(
+                self.model, self.loss, self.validation_loader, self.device
+            )
+        else:
+            reward = 0.0
         return state, reward, done, {}
 
     def reset(self, instance: Optional[Union[Instance, int]] = None):
@@ -84,7 +91,7 @@ class SGDEnv(gym.Env, EzPickle):
                 optimizer_params,
                 self.loss,
                 self.batch_size,
-                (self.train_loader, _),
+                (self.train_loader, self.validation_loader),
                 self.cutoff,
                 self.crash_penalty,
             ) = instance
@@ -115,7 +122,7 @@ class SGDEnv(gym.Env, EzPickle):
                 optimizer_params,
                 self.loss,
                 self.batch_size,
-                (self.train_loader, _),
+                (self.train_loader, self.validation_loader),
                 self.cutoff,
                 self.crash_penalty,
             ) = self.instance
