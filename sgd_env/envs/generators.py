@@ -72,8 +72,8 @@ def random_mnist_model(rng: np.random.RandomState, **kwargs) -> nn.Module:
 
 
 def random_mlp_mnist_model(rng: np.random.RandomState, **kwargs) -> nn.Module:
-    l1 = 129 - int(np.exp(rng.uniform(low=np.log(1), high=np.log(128))))
-    l2 = 65 - int(np.exp(rng.uniform(low=np.log(1), high=np.log(64))))
+    l1 = 2 ** (8 - int(np.exp(rng.uniform(low=np.log(1), high=np.log(3)))))
+    l2 = 2 ** (7 - int(np.exp(rng.uniform(low=np.log(1), high=np.log(4)))))
     return nn.Sequential(
         nn.Flatten(1),
         nn.Linear(784, l1),
