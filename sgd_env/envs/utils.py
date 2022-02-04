@@ -43,6 +43,8 @@ def generate_seed(idx, rng):
         seed = rng.randint(1, 4294967295, dtype=np.int64)
         generate_seed.cache.append(seed)
     return generate_seed.cache[idx]
+
+
 generate_seed.rng = None
 
 

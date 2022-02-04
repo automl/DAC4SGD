@@ -1,15 +1,14 @@
-from itertools import cycle, count
-from typing import Optional, Union, Iterator, Tuple
+from itertools import count, cycle
+from typing import Iterator, Optional, Tuple, Union
 
 import gym
-from gym import spaces
-from gym.utils import seeding, EzPickle
-
 import numpy as np
 import torch
+from gym import spaces
+from gym.utils import EzPickle, seeding
 
-from sgd_env.envs.generators import Instance, default_instance_generator, GeneratorFunc
 from sgd_env.envs import utils
+from sgd_env.envs.generators import GeneratorFunc, Instance, default_instance_generator
 
 
 class SGDEnv(gym.Env, EzPickle):
@@ -105,7 +104,9 @@ class SGDEnv(gym.Env, EzPickle):
 
             assert instance_idx < self.n_instances
 
-            self.instance, seed = utils.get_instance(self.generator, instance_idx, self.np_random)
+            self.instance, seed = utils.get_instance(
+                self.generator, instance_idx, self.np_random
+            )
             torch.manual_seed(seed)
             torch.cuda.manual_seed(seed)
             torch.cuda.manual_seed_all(seed)

@@ -1,11 +1,11 @@
-from typing import Union, List
 import dataclasses
 import json
+from typing import List, Union
 
 import numpy as np
 import torch.optim
 
-from sgd_env.policy import AbstractPolicy
+from sgd_env.policy.policy import AbstractPolicy
 
 
 class Serializable:

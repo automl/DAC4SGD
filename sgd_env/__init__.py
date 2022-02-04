@@ -1,7 +1,6 @@
 from gym.envs.registration import register
 
-from sgd_env.envs import hyperparameters
-from sgd_env.envs import generators
+from sgd_env.envs import generators, hyperparameters
 
 register(
     id="sgd-v0",

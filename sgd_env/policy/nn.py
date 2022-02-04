@@ -1,10 +1,10 @@
-from typing import List, Optional
 from itertools import tee
+from typing import List, Optional
 
 import torch
 from torch import nn
 
-from sgd_env.policy import AbstractPolicy
+from sgd_env.policy.policy import AbstractPolicy
 
 
 def pairwise(iterable):

@@ -1,24 +1,27 @@
-from collections import namedtuple
 import sys
-from typing import Tuple, Any
-from functools import partial, lru_cache
+from collections import namedtuple
+from functools import lru_cache, partial
+from typing import Any, Tuple
 
 if sys.version_info.minor >= 8:
     from typing import Protocol
 else:
     from typing_extensions import Protocol  # type: ignore
 
+import numpy as np
 import torch
-from torch import nn
 import torch.nn.functional as F
+from ConfigSpace import (
+    AndConjunction,
+    ConfigurationSpace,
+    Constant,
+    GreaterThanCondition,
+    UniformFloatHyperparameter,
+    UniformIntegerHyperparameter,
+)
+from torch import nn
 from torch.utils.data.dataloader import DataLoader
 from torchvision import datasets, transforms
-import numpy as np
-from ConfigSpace import ConfigurationSpace
-from ConfigSpace import UniformIntegerHyperparameter
-from ConfigSpace import UniformFloatHyperparameter
-from ConfigSpace import Constant
-
 
 Instance = namedtuple(
     "Instance",
@@ -44,10 +47,32 @@ class GeneratorFunc(Protocol):
 def default_configuration_space() -> ConfigurationSpace:
     cs = ConfigurationSpace()
     cutoff = UniformIntegerHyperparameter("cutoff", 300, 900)
-    learning_rate = UniformFloatHyperparameter("lr", 0.0001, 0.1, log=True)
+
+    modify = UniformFloatHyperparameter("modify", 0, 1)
+
+    optimizer_parameters = [
+        UniformFloatHyperparameter("eps", 1e-10, 1e-6, log=True),
+        UniformFloatHyperparameter("weight_decay", 0.0001, 1, log=True),
+        UniformFloatHyperparameter("beta1", 0.0001, 0.2, log=True),
+        UniformFloatHyperparameter("beta2", 0.0001, 0.2, log=True),
+    ]
+
     batch_size_exp = UniformIntegerHyperparameter("batch_size_exp", 2, 8, log=True)
-    train_val = Constant("train_validation_ratio", 0.99)
-    cs.add_hyperparameters([cutoff, learning_rate, batch_size_exp, train_val])
+    train_val = Constant("train_validation_ratio", 0.9)
+
+    cs.add_hyperparameters(
+        [cutoff, batch_size_exp, train_val, modify, *optimizer_parameters]
+    )
+
+    for param in optimizer_parameters:
+        mod = UniformFloatHyperparameter(f"mod_{param.name}", 0, 1)
+        cs.add_hyperparameter(mod)
+        cs.add_condition(
+            AndConjunction(
+                GreaterThanCondition(param, modify, 0.8),
+                GreaterThanCondition(param, mod, 0.5),
+            )
+        )
     return cs
 
 
@@ -106,7 +131,11 @@ def random_mnist_loader(rng: np.random.RandomState, **kwargs) -> Tuple[DataLoade
 
 
 def random_optimizer_parameters(rng, **kwargs):
-    return {"lr": kwargs["lr"]}
+    return {
+        "betas": (1 - kwargs.get("beta1", 0.1), 1 - kwargs.get("beta2", 0.0001)),
+        "weight_decay": kwargs.get("weight_decay", 1e-2),
+        "eps": kwargs.get("eps", 1e-8),
+    }
 
 
 def random_mnist_instance(rng: np.random.RandomState, **kwargs):
