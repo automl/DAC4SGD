@@ -1,5 +1,5 @@
-# DAC4SGD4CV
+# DAC4SGD
 
 ```bash
-git clone https://github.com/automl-private/SGD4SGD
+git clone https://github.com/automl-private/DAC4SGD
 ```
