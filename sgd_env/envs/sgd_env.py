@@ -1,5 +1,5 @@
 from itertools import count, cycle
-from typing import Iterator, Optional, Tuple, Union
+from typing import Iterator, Optional, Tuple, Union, Dict
 
 import gym
 import numpy as np
@@ -10,17 +10,6 @@ from dac4automlcomp.dac_env import DACEnv, Instance, Generator
 from sgd_env.envs import utils
 from sgd_env.envs.generators import default_instance_generator
 
-SGDInstance = Instance("SGDInstance", [
-        "dataset",
-        "model",
-        "optimizer_params",
-        "loss",
-        "batch_size",
-        "loaders",
-        "cutoff",
-        "crash_penalty"],
-)
-
 
 class SGDEnv(DACEnv):
     def __init__(
@@ -30,7 +19,7 @@ class SGDEnv(DACEnv):
         n_instances: Union[int, float] = np.inf,
         device: str = "cpu",
     ):
-        self.super().__init__(generator=generator, instance_set=instance_set, n_instances=n_instances, device=device)
+        super().__init__(generator=generator, instance_set=instance_set, n_instances=n_instances, device=device)
         torch.backends.cudnn.benchmark = False
         torch.backends.cudnn.deterministic = True
         if self.n_instances == np.inf:
@@ -92,7 +81,7 @@ class SGDEnv(DACEnv):
             reward = 0.0
         return state, reward, done, {}
 
-    def reset(self, instance: Optional[Union[SGDInstance, int]] = None):
+    def reset(self, instance: Optional[Union[Instance, int]] = None):
         seed = self._reset(instance)
         default_rng_state = torch.get_rng_state()
         if seed:

@@ -24,6 +24,18 @@ from torch.utils.data.dataloader import DataLoader
 from torchvision import datasets, transforms
 
 
+SGDInstance = Instance("SGDInstance", [
+        "dataset",
+        "model",
+        "optimizer_params",
+        "loss",
+        "batch_size",
+        "loaders",
+        "cutoff",
+        "crash_penalty"],
+)
+
+
 @lru_cache(maxsize=None)
 def default_configuration_space() -> ConfigurationSpace:
     cs = ConfigurationSpace()
@@ -134,7 +146,7 @@ def random_mnist_instance(rng: np.random.RandomState, **kwargs):
     loss = F.nll_loss
     cutoff = kwargs["cutoff"]
     crash_penalty = np.log(0.1) * cutoff
-    return model, optimizer_params, loss, batch_size, loaders, cutoff, crash_penalty
+    return ["MNIST", model, optimizer_params, loss, batch_size, loaders, cutoff, crash_penalty]
 
 
 def random_instance(
@@ -155,7 +167,8 @@ def random_instance(
     else:
         raise NotImplementedError
     torch.set_rng_state(default_rng_state)
-    return Instance(dataset, *instance)
+    SGDInstance.i = (dataset, *instance)
+    return SGDInstance
 
 
 default_instance_generator: GeneratorFunc = partial(
