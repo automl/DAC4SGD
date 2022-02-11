@@ -23,25 +23,6 @@ from torch import nn
 from torch.utils.data.dataloader import DataLoader
 from torchvision import datasets, transforms
 
-Instance = namedtuple(
-    "Instance",
-    [
-        "dataset",
-        "model",
-        "optimizer_params",
-        "loss",
-        "batch_size",
-        "loaders",
-        "cutoff",
-        "crash_penalty",
-    ],
-)
-
-
-class GeneratorFunc(Protocol):
-    def __call__(self, rng: np.random.RandomState, **kwargs: int) -> Instance:
-        ...
-
 
 @lru_cache(maxsize=None)
 def default_configuration_space() -> ConfigurationSpace:
