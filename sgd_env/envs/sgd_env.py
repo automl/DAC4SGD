@@ -43,20 +43,20 @@ class SGDEnv(gym.Env, EzPickle):
         utils.optimizer_action(self.optimizer, "lr", {"lr": action})
         default_rng_state = torch.get_rng_state()
         torch.set_rng_state(self.env_rng_state)
-        train_args = [
-            self.model,
-            self.optimizer,
-            self.loss,
-            self.train_iter,
-            1,
-            self.device,
-        ]
+        train_args = {
+            "model": self.model,
+            "optimizer": self.optimizer,
+            "loss_function": self.loss,
+            "loader": self.train_iter,
+            "steps": 1,
+            "device": self.device,
+        }
         try:
-            loss = utils.train(*train_args)
+            loss = utils.train(**train_args)
         except StopIteration:
             self.train_iter = iter(self.train_loader)
             train_args[3] = self.train_iter
-            loss = utils.train(*train_args)
+            loss = utils.train(**train_args)
         self._step += 1
         self.env_rng_state.data = torch.get_rng_state()
         torch.set_rng_state(default_rng_state)
