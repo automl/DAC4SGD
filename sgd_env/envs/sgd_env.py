@@ -47,7 +47,7 @@ class SGDEnv(gym.Env, EzPickle):
         train_args = [
             self.model,
             self.optimizer,
-            self.loss,
+            self.loss_function,
             self.train_iter,
             1,
             self.device,
