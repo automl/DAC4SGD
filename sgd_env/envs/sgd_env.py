@@ -46,7 +46,7 @@ class SGDEnv(gym.Env, EzPickle):
         train_args = {
             "model": self.model,
             "optimizer": self.optimizer,
-            "loss_function": self.loss,
+            "loss_function": self.loss_function,
             "loader": self.train_iter,
             "steps": 1,
             "device": self.device,
@@ -72,7 +72,7 @@ class SGDEnv(gym.Env, EzPickle):
             reward = self.crash_penalty
         elif done:
             reward = -utils.test(
-                self.model, self.loss, self.validation_loader, self.device
+                self.model, self.loss_function, self.validation_loader, self.device
             )
         else:
             reward = 0.0
@@ -88,7 +88,7 @@ class SGDEnv(gym.Env, EzPickle):
                 self.dataset,
                 self.model,
                 optimizer_params,
-                self.loss,
+                self.loss_function,
                 self.batch_size,
                 (self.train_loader, self.validation_loader),
                 self.cutoff,
@@ -115,7 +115,7 @@ class SGDEnv(gym.Env, EzPickle):
                 self.dataset,
                 self.model,
                 optimizer_params,
-                self.loss,
+                self.loss_function,
                 self.batch_size,
                 (self.train_loader, self.validation_loader),
                 self.cutoff,
@@ -139,7 +139,7 @@ class SGDEnv(gym.Env, EzPickle):
         (data, target) = next(self.train_iter)
         data, target = data.to(self.device), target.to(self.device)
         output = self.model(data)
-        loss = self.loss(output, target, reduction="none")
+        loss = self.loss_function(output, target, reduction="none")
         self.env_rng_state: torch.Tensor = torch.get_rng_state()
         torch.set_rng_state(default_rng_state)
         return {"step": 0, "loss": loss, "crashed": False}
