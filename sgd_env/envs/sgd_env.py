@@ -40,6 +40,7 @@ class SGDEnv(gym.Env, EzPickle):
         return self._observation_space
 
     def step(self, action: float):
+        action = float(action)  # convert to float if we receive a tensor
         utils.optimizer_action(self.optimizer, "lr", {"lr": action})
         default_rng_state = torch.get_rng_state()
         torch.set_rng_state(self.env_rng_state)
