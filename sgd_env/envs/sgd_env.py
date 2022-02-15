@@ -65,7 +65,7 @@ class SGDEnv(DACEnv):
                 torch.nn.utils.parameters_to_vector(self.model.parameters())
             ).any()
         )
-        state = {"step": self._step, "loss": loss, "crashed": crashed}
+        state = {"step": self.n_step, "loss": loss, "crashed": crashed}
         done = done if not crashed else True
         if crashed:
             reward = self.crash_penalty
