@@ -8,7 +8,7 @@ from gym import spaces
 from gym.utils import EzPickle, seeding
 
 from sgd_env.envs import utils
-from sgd_env.envs.generators import DefaultSGDGenerator, GeneratorIterator, Instance
+from sgd_env.envs.generators import DefaultSGDGenerator, GeneratorIterator, SGDInstance
 
 
 class DACEnv(gym.Env, EzPickle):
@@ -24,17 +24,11 @@ class DACEnv(gym.Env, EzPickle):
         self.seed()
 
     @singledispatchmethod
-    def get_instance(self, instance: Optional[Union[Instance, int]]):
+    def get_instance(self, instance):
         if instance is None:
             return next(self.generator_iterator)
         else:
-            raise ValueError(
-                "Invalid instance argument, either provide type 'Instance' or an 'int' ID."
-            )
-
-    @get_instance.register
-    def _(self, instance: Instance):
-        return instance
+            raise NotImplementedError
 
     @get_instance.register
     def _(self, instance: int):
@@ -73,6 +67,10 @@ class SGDEnv(DACEnv):
                 "observation space will stay fixed."
             )
         return self._observation_space
+
+    @DACEnv.get_instance.register
+    def _(self, instance: SGDInstance):
+        return instance
 
     def step(self, action: float):
         action = float(action)  # convert to float if we receive a tensor
@@ -114,13 +112,13 @@ class SGDEnv(DACEnv):
             reward = 0.0
         return state, reward, done, {}
 
-    def reset(self, instance: Optional[Union[Instance, int]] = None):
+    def reset(self, instance: Optional[Union[SGDInstance, int]] = None):
         self._step = 0
         default_rng_state = torch.get_rng_state()
 
         self.instance = self.get_instance(instance)
 
-        assert isinstance(self.instance, Instance)
+        assert isinstance(self.instance, SGDInstance)
         (
             self.dataset,
             self.model,

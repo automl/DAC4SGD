@@ -2,7 +2,7 @@ import abc
 from collections import namedtuple
 from dataclasses import InitVar, dataclass, field
 from itertools import count, cycle
-from typing import Any, Generic, List, Tuple, TypeVar, Union
+from typing import Generic, List, Tuple, TypeVar, Union
 
 import numpy as np
 import torch
@@ -18,8 +18,8 @@ from torch import nn
 from torch.utils.data.dataloader import DataLoader
 from torchvision import datasets, transforms
 
-Instance = namedtuple(
-    "Instance",
+SGDInstance = namedtuple(
+    "SGDInstance",
     [
         "dataset",
         "model",
@@ -33,7 +33,6 @@ Instance = namedtuple(
     ],
 )
 
-
 T = TypeVar("T")
 
 
@@ -46,7 +45,7 @@ class Generator(Generic[T], abc.ABC):
     def random_instance(self, rng: np.random.RandomState) -> T:
         pass
 
-    def get_instance(self, instance_idx) -> Tuple[T, int]:
+    def get_instance(self, instance_idx) -> T:
         while instance_idx >= len(self._instance_seeds):
             seed = self._internal_rng.randint(1, 4294967295, dtype=np.int64)
             self._instance_seeds.append(seed)
@@ -65,11 +64,12 @@ class GeneratorIterator(Generic[T]):
     ):
         self.generator = generator
         self.n_instances = n_instances
-        self.instance_count = (
-            count(start=0, step=1)
-            if self.n_instances == np.inf
-            else cycle(range(self.n_instances))
-        )
+        self.instance_count: Union[cycle[int], count[int]]
+        if self.n_instances == np.inf:
+            self.instance_count = count(start=0, step=1)
+        else:
+            assert isinstance(self.n_instances, int)
+            self.instance_count = cycle(range(self.n_instances))
 
     def __iter__(self):
         return self
@@ -83,7 +83,7 @@ class GeneratorIterator(Generic[T]):
 
 
 @dataclass
-class DefaultSGDGenerator(Generator[Instance]):
+class DefaultSGDGenerator(Generator[SGDInstance]):
     cutoff: InitVar[Hyperparameter] = UniformIntegerHyperparameter("cutoff", 300, 900)
     batch_size_exp: InitVar[Hyperparameter] = UniformIntegerHyperparameter(
         "batch_size_exp", 2, 8, log=True
@@ -140,7 +140,7 @@ class DefaultSGDGenerator(Generator[Instance]):
         else:
             raise NotImplementedError
         torch.set_rng_state(default_rng_state)
-        return Instance(dataset, *instance)
+        return SGDInstance(dataset, *instance)
 
     def _sample_optimizer_params(self, rng, **kwargs):
         modify = rng.rand()
@@ -204,7 +204,7 @@ class DefaultSGDGenerator(Generator[Instance]):
     @staticmethod
     def _random_mnist_loader(
         rng: np.random.RandomState, **kwargs
-    ) -> Tuple[DataLoader, Any]:
+    ) -> Tuple[DataLoader, DataLoader]:
         transform = transforms.Compose(
             [transforms.ToTensor(), transforms.Normalize((0.1307,), (0.3081,))]
         )

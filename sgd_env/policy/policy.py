@@ -9,7 +9,7 @@ class AbstractPolicy(ABC):
         ...
 
     @abstractmethod
-    def reset(self, instance: generators.Instance):
+    def reset(self, instance: generators.SGDInstance):
         ...
 
     @abstractmethod
