@@ -22,7 +22,9 @@ class SGDPolicy(AbstractPolicy):
         self.deterministic = deterministic
 
     def act(self, state):
-        return self.agent.predict(observation=state, deterministic=self.deterministic)
+        # next_state will be None because we don't use an RNN
+        action, next_state = self.agent.predict(observation=state, deterministic=self.deterministic)
+        return action
 
     def reset(self, instance: generators.Instance):
         # We don't use instance features here so pass
