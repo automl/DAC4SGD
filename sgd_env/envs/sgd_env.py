@@ -1,46 +1,12 @@
-from functools import singledispatchmethod
 from typing import Iterator, Optional, Tuple, Union
 
-import gym
 import numpy as np
 import torch
 from gym import spaces
-from gym.utils import EzPickle, seeding
 
+from dac4automlcomp.dac_env import DACEnv
 from sgd_env.envs import utils
-from sgd_env.envs.generators import DefaultSGDGenerator, GeneratorIterator, SGDInstance
-
-
-class DACEnv(gym.Env, EzPickle):
-    def __init__(
-        self,
-        generator: DefaultSGDGenerator = DefaultSGDGenerator(),
-        n_instances: Union[int, float] = np.inf,
-        device: str = "cpu",
-    ):
-        self.generator = generator
-        self.n_instances = n_instances
-        self.device = device
-        self.seed()
-
-    @singledispatchmethod
-    def get_instance(self, instance):
-        if instance is None:
-            return next(self.generator_iterator)
-        else:
-            raise NotImplementedError
-
-    @get_instance.register
-    def _(self, instance: int):
-        return self.generator_iterator[instance]
-
-    def seed(self, seed=None):
-        self.np_random, _ = seeding.np_random(seed)
-        self.generator.seed(seed)
-        self.generator_iterator = GeneratorIterator(self.generator, self.n_instances)
-        torch.backends.cudnn.benchmark = False
-        torch.backends.cudnn.deterministic = True
-        return [seed]
+from sgd_env.envs.generators import DefaultSGDGenerator, SGDInstance
 
 
 class SGDEnv(DACEnv):
