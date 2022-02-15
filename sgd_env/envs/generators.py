@@ -22,7 +22,7 @@ from torch import nn
 from torch.utils.data.dataloader import DataLoader
 from torchvision import datasets, transforms
 
-from dac4automlcomp.dac_env import Instance
+from dac4automlcomp.dac_env import Instance, Generator
 
 
 SGDInstance = Instance("SGDInstance", [
@@ -172,6 +172,6 @@ def random_instance(
     return SGDInstance
 
 
-default_instance_generator: GeneratorFunc = partial(
+default_instance_generator: Generator = partial(
     random_instance, cs=default_configuration_space()
 )
