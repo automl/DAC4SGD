@@ -29,7 +29,8 @@ SGDInstance = namedtuple(
         "train_validation_ratio",
         "loaders",
         "cutoff",
-        "crash_penalty"],
+        "crash_penalty",
+    ],
 )
 
 T = TypeVar("T")

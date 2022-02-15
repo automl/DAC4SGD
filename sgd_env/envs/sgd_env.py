@@ -1,10 +1,11 @@
 from functools import singledispatchmethod
 from typing import Iterator, Optional, Tuple, Union
 
+import gym
 import numpy as np
 import torch
 from gym import spaces
-from dac4automlcomp.dac_env import DACEnv, Instance, Generator
+from gym.utils import EzPickle, seeding
 
 from sgd_env.envs import utils
 from sgd_env.envs.generators import DefaultSGDGenerator, GeneratorIterator, SGDInstance
