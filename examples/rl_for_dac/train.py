@@ -106,7 +106,7 @@ def main(args: argparse.Namespace, unknown_args: List[str], parser: argparse.Arg
     kwargs_dict = {k: v for (k, v) in kwargs}
     args_fn = logdir / "args.json"
     with open(args_fn, 'w') as file:
-        json.dump(kwargs_dict, file, sep="\t")
+        json.dump(kwargs_dict, file, indent="\t")
 
     # Make environment
     env = make_sgd_env(args=args)
