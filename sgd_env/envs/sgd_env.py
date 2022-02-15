@@ -1,5 +1,5 @@
 from itertools import count, cycle
-from typing import Iterator, Optional, Tuple, Union
+from typing import Iterator, Optional, Tuple, Union, Type
 
 import gym
 import numpy as np
@@ -8,13 +8,13 @@ from gym import spaces
 from gym.utils import EzPickle, seeding
 
 from sgd_env.envs import utils
-from sgd_env.envs.generators import GeneratorFunc, Instance, default_instance_generator
+from sgd_env.envs.generators import DefaultSGDGenerator, Instance
 
 
 class SGDEnv(gym.Env, EzPickle):
     def __init__(
         self,
-        generator: GeneratorFunc = default_instance_generator,
+        generator: DefaultSGDGenerator = DefaultSGDGenerator(),
         n_instances: Union[int, float] = np.inf,
         device: str = "cpu",
     ):
@@ -91,6 +91,7 @@ class SGDEnv(gym.Env, EzPickle):
                 optimizer_params,
                 self.loss_function,
                 self.batch_size,
+                self.train_validation_ratio,
                 (self.train_loader, self.validation_loader),
                 self.cutoff,
                 self.crash_penalty,
@@ -105,9 +106,7 @@ class SGDEnv(gym.Env, EzPickle):
 
             assert instance_idx < self.n_instances
 
-            self.instance, seed = utils.get_instance(
-                self.generator, instance_idx, self.np_random
-            )
+            self.instance, seed = self.generator.get_instance(instance_idx)
             torch.manual_seed(seed)
             torch.cuda.manual_seed(seed)
             torch.cuda.manual_seed_all(seed)
@@ -118,6 +117,7 @@ class SGDEnv(gym.Env, EzPickle):
                 optimizer_params,
                 self.loss_function,
                 self.batch_size,
+                self.train_validation_ratio,
                 (self.train_loader, self.validation_loader),
                 self.cutoff,
                 self.crash_penalty,
@@ -146,7 +146,8 @@ class SGDEnv(gym.Env, EzPickle):
         return {"step": 0, "loss": loss, "crashed": False}
 
     def seed(self, seed=None):
-        self.np_random, seed = seeding.np_random(seed)
+        self.np_random, _ = seeding.np_random(seed)
+        self.generator.seed(seed)
         torch.backends.cudnn.benchmark = False
         torch.backends.cudnn.deterministic = True
         if self.n_instances == np.inf:
