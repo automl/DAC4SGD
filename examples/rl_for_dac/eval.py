@@ -1,12 +1,15 @@
 import json
 import argparse
-from typing import Union
+from typing import Union, Optional
 from pathlib import Path
 import stable_baselines3
 from stable_baselines3.common.base_class import BaseAlgorithm
 
 from sgd_env.policy.policy import AbstractPolicy
 from sgd_env.envs import generators
+
+from examples.rl_for_dac.train import make_sgd_env
+from examples.utils import run_policy
 
 
 def load_agent(agent: str, model_fn: Union[str, Path]) -> BaseAlgorithm:
@@ -17,8 +20,9 @@ def load_agent(agent: str, model_fn: Union[str, Path]) -> BaseAlgorithm:
 
 
 class SGDPolicy(AbstractPolicy):
-    def __init__(self, agent: BaseAlgorithm, deterministic: bool = False):
+    def __init__(self, agent: BaseAlgorithm, args: Optional[argparse.Namespace] = None, deterministic: bool = False):
         self.agent = agent
+        self.args = args
         self.deterministic = deterministic
 
     def act(self, state):
@@ -52,13 +56,23 @@ class SGDPolicy(AbstractPolicy):
 
         sgd_policy = cls(
             agent=agent,
+            args=args
         )
 
         return sgd_policy
 
 
 if __name__ == '__main__':
+    import numpy as np
+
+    # Load model and env
     model_fn = "tmp/model.zip"
     sgd_policy = SGDPolicy.load(model_fn)
+    env = make_sgd_env(args=sgd_policy.args)
+
+    # Exemplarily evaluate
+    states, rewards = run_policy(env=env, policy=sgd_policy, instance=None)
+    cumulative_reward = np.sum(rewards)
+    print("Cumulative Reward: ", cumulative_reward)
 
 

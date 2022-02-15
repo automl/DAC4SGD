@@ -1,5 +1,5 @@
-from itertools import count, cycle
-from typing import Iterator, Optional, Tuple, Union, Dict
+from functools import singledispatchmethod
+from typing import Iterator, Optional, Tuple, Union
 
 import numpy as np
 import torch
@@ -7,20 +7,50 @@ from gym import spaces
 from dac4automlcomp.dac_env import DACEnv, Instance, Generator
 
 from sgd_env.envs import utils
-from sgd_env.envs.generators import default_instance_generator
+from sgd_env.envs.generators import DefaultSGDGenerator, GeneratorIterator, SGDInstance
+
+
+class DACEnv(gym.Env, EzPickle):
+    def __init__(
+        self,
+        generator: DefaultSGDGenerator = DefaultSGDGenerator(),
+        n_instances: Union[int, float] = np.inf,
+        device: str = "cpu",
+    ):
+        self.generator = generator
+        self.n_instances = n_instances
+        self.device = device
+        self.seed()
+
+    @singledispatchmethod
+    def get_instance(self, instance):
+        if instance is None:
+            return next(self.generator_iterator)
+        else:
+            raise NotImplementedError
+
+    @get_instance.register
+    def _(self, instance: int):
+        return self.generator_iterator[instance]
+
+    def seed(self, seed=None):
+        self.np_random, _ = seeding.np_random(seed)
+        self.generator.seed(seed)
+        self.generator_iterator = GeneratorIterator(self.generator, self.n_instances)
+        torch.backends.cudnn.benchmark = False
+        torch.backends.cudnn.deterministic = True
+        return [seed]
 
 
 class SGDEnv(DACEnv):
     def __init__(
         self,
-        generator: Generator = default_instance_generator,
-        instance_set: Dict = None,
+        generator: DefaultSGDGenerator = DefaultSGDGenerator(),
         n_instances: Union[int, float] = np.inf,
         device: str = "cpu",
     ):
-        super().__init__(generator=generator, instance_set=instance_set, n_instances=n_instances, device=device)
-        torch.backends.cudnn.benchmark = False
-        torch.backends.cudnn.deterministic = True
+        super().__init__(generator, n_instances, device)
+
         self.action_space = spaces.Box(low=0.0, high=np.inf, shape=(1,))
         self._observation_space = None
         self.train_iter: Iterator[Tuple[torch.Tensor, torch.Tensor]]
@@ -36,6 +66,10 @@ class SGDEnv(DACEnv):
                 "observation space will stay fixed."
             )
         return self._observation_space
+
+    @DACEnv.get_instance.register
+    def _(self, instance: SGDInstance):
+        return instance
 
     def step(self, action: float):
         done = self._step()
@@ -77,19 +111,20 @@ class SGDEnv(DACEnv):
             reward = 0.0
         return state, reward, done, {}
 
-    def reset(self, instance: Optional[Union[Instance, int]] = None):
-        seed = self._reset(instance)
+    def reset(self, instance: Optional[Union[SGDInstance, int]] = None):
+        self._step = 0
         default_rng_state = torch.get_rng_state()
-        if seed:
-            torch.manual_seed(seed)
-            torch.cuda.manual_seed(seed)
-            torch.cuda.manual_seed_all(seed)
+
+        self.instance = self.get_instance(instance)
+
+        assert isinstance(self.instance, SGDInstance)
         (
             self.dataset,
             self.model,
             optimizer_params,
             self.loss_function,
             self.batch_size,
+            self.train_validation_ratio,
             (self.train_loader, self.validation_loader),
             self.cutoff,
             self.crash_penalty,

@@ -1,178 +1,246 @@
-import sys
-from functools import lru_cache, partial
-from typing import Any, Tuple
-
-if sys.version_info.minor >= 8:
-    from typing import Protocol
-else:
-    from typing_extensions import Protocol  # type: ignore
+import abc
+from collections import namedtuple
+from dataclasses import InitVar, dataclass, field
+from itertools import count, cycle
+from typing import Generic, List, Tuple, TypeVar, Union
 
 import numpy as np
 import torch
 import torch.nn.functional as F
 from ConfigSpace import (
-    AndConjunction,
     ConfigurationSpace,
     Constant,
-    GreaterThanCondition,
     UniformFloatHyperparameter,
     UniformIntegerHyperparameter,
 )
+from ConfigSpace.hyperparameters import Hyperparameter
 from torch import nn
 from torch.utils.data.dataloader import DataLoader
 from torchvision import datasets, transforms
 
-from dac4automlcomp.dac_env import Instance, Generator
-
-
-SGDInstance = Instance("SGDInstance", [
+SGDInstance = namedtuple(
+    "SGDInstance",
+    [
         "dataset",
         "model",
         "optimizer_params",
         "loss",
         "batch_size",
+        "train_validation_ratio",
         "loaders",
         "cutoff",
         "crash_penalty"],
 )
 
+T = TypeVar("T")
 
-@lru_cache(maxsize=None)
-def default_configuration_space() -> ConfigurationSpace:
-    cs = ConfigurationSpace()
-    cutoff = UniformIntegerHyperparameter("cutoff", 300, 900)
 
-    modify = UniformFloatHyperparameter("modify", 0, 1)
+@dataclass(init=False)  # type: ignore
+class Generator(Generic[T], abc.ABC):
+    _internal_rng: np.random.RandomState = np.random.RandomState(None)
+    _instance_seeds: List[int] = field(default_factory=lambda: [])
 
-    optimizer_parameters = [
-        UniformFloatHyperparameter("eps", 1e-10, 1e-6, log=True),
-        UniformFloatHyperparameter("weight_decay", 0.0001, 1, log=True),
-        UniformFloatHyperparameter("beta1", 0.0001, 0.2, log=True),
-        UniformFloatHyperparameter("beta2", 0.0001, 0.2, log=True),
-    ]
+    @abc.abstractmethod
+    def random_instance(self, rng: np.random.RandomState) -> T:
+        pass
 
-    batch_size_exp = UniformIntegerHyperparameter("batch_size_exp", 2, 8, log=True)
-    train_val = Constant("train_validation_ratio", 0.9)
+    def get_instance(self, instance_idx) -> T:
+        while instance_idx >= len(self._instance_seeds):
+            seed = self._internal_rng.randint(1, 4294967295, dtype=np.int64)
+            self._instance_seeds.append(seed)
+        seed = self._instance_seeds[instance_idx]
+        rng = np.random.RandomState(seed)
+        return self.random_instance(rng)
 
-    cs.add_hyperparameters(
-        [cutoff, batch_size_exp, train_val, modify, *optimizer_parameters]
+    def seed(self, seed):
+        self._internal_rng = np.random.RandomState(seed)  # Do not use it!
+        self._instance_seeds: List[int] = []
+
+
+class GeneratorIterator(Generic[T]):
+    def __init__(
+        self, generator: Generator[T], n_instances: Union[int, float] = np.inf
+    ):
+        self.generator = generator
+        self.n_instances = n_instances
+        self.instance_count: Union[cycle[int], count[int]]
+        if self.n_instances == np.inf:
+            self.instance_count = count(start=0, step=1)
+        else:
+            assert isinstance(self.n_instances, int)
+            self.instance_count = cycle(range(self.n_instances))
+
+    def __iter__(self):
+        return self
+
+    def __next__(self):
+        instance_idx = next(self.instance_count)
+        return self.generator.get_instance(instance_idx)
+
+    def __getitem__(self, instance_idx):
+        return self.generator.get_instance(instance_idx)
+
+
+@dataclass
+class DefaultSGDGenerator(Generator[SGDInstance]):
+    cutoff: InitVar[Hyperparameter] = UniformIntegerHyperparameter("cutoff", 300, 900)
+    batch_size_exp: InitVar[Hyperparameter] = UniformIntegerHyperparameter(
+        "batch_size_exp", 2, 8, log=True
+    )
+    train_validation_ratio: InitVar[Hyperparameter] = Constant(
+        "train_validation_ratio", 0.9
+    )
+    eps: InitVar[Hyperparameter] = UniformFloatHyperparameter(
+        "eps",
+        1e-10,
+        1e-6,
+        log=True,
+        default_value=1e-8,
+    )
+    weight_decay: InitVar[Hyperparameter] = UniformFloatHyperparameter(
+        "weight_decay",
+        0.0001,
+        1,
+        log=True,
+        default_value=1e-2,
+    )
+    inv_beta1: InitVar[Hyperparameter] = UniformFloatHyperparameter(
+        "inv_beta1",
+        0.0001,
+        0.2,
+        log=True,
+        default_value=0.1,
+    )
+    inv_beta2: InitVar[Hyperparameter] = UniformFloatHyperparameter(
+        "inv_beta2",
+        0.0001,
+        0.2,
+        log=True,
+        default_value=0.0001,
     )
 
-    for param in optimizer_parameters:
-        mod = UniformFloatHyperparameter(f"mod_{param.name}", 0, 1)
-        cs.add_hyperparameter(mod)
-        cs.add_condition(
-            AndConjunction(
-                GreaterThanCondition(param, modify, 0.8),
-                GreaterThanCondition(param, mod, 0.5),
+    def __post_init__(self, *args):
+        self.cs = ConfigurationSpace()
+        self.cs.add_hyperparameters(args)
+
+    def random_instance(self, rng):
+        default_rng_state = torch.get_rng_state()
+        seed = rng.randint(1, 4294967295, dtype=np.int64)
+        self.cs.seed(seed)
+        torch.manual_seed(seed)
+        torch.cuda.manual_seed(seed)
+        torch.cuda.manual_seed_all(seed)
+        config = self.cs.sample_configuration()
+        dataset_types = ["MNIST"]
+        idx = rng.randint(low=0, high=len(dataset_types))
+        dataset = dataset_types[idx]
+        if dataset == "MNIST":
+            instance = self._random_mnist_instance(rng, **config)
+        else:
+            raise NotImplementedError
+        torch.set_rng_state(default_rng_state)
+        return SGDInstance(dataset, *instance)
+
+    def _sample_optimizer_params(self, rng, **kwargs):
+        modify = rng.rand()
+        samples = {
+            parameter: (
+                kwargs[parameter]
+                if modify > 0.8 and rng.rand() > 0.5
+                else getattr(self, parameter).default_value
             )
+            for parameter in [
+                "weight_decay",
+                "eps",
+                "inv_beta1",
+                "inv_beta2",
+            ]
+        }
+
+        return {
+            "weight_decay": samples["weight_decay"],
+            "eps": samples["eps"],
+            "betas": (1 - samples["inv_beta1"], 1 - samples["inv_beta2"]),
+        }
+
+    @staticmethod
+    def _random_feature_extractor(rng: np.random.RandomState, **kwargs) -> nn.Module:
+        conv1 = int(np.exp(rng.uniform(low=np.log(2), high=np.log(9))))
+        conv2 = int(np.exp(rng.uniform(low=np.log(6), high=np.log(24))))
+        conv3 = int(np.exp(rng.uniform(low=np.log(32), high=np.log(256))))
+        return nn.Sequential(
+            nn.Conv2d(1, conv1, 3, 1),
+            nn.MaxPool2d(2),
+            nn.Conv2d(conv1, conv2, 3, 1),
+            nn.MaxPool2d(2),
+            nn.Conv2d(conv2, conv3, 3, 1),
+            nn.ReLU(),
         )
-    return cs
 
+    def _random_mnist_model(self, rng: np.random.RandomState, **kwargs) -> nn.Module:
+        f = self._random_feature_extractor(rng)
+        n_features = int(
+            torch.prod(torch.tensor(f(torch.zeros((1, 1, 28, 28))).shape)).item()
+        )
+        return nn.Sequential(
+            f, nn.Flatten(1), nn.Linear(n_features, 10), nn.LogSoftmax(1)
+        )
 
-def random_feature_extractor(rng: np.random.RandomState, **kwargs) -> nn.Module:
-    conv1 = int(np.exp(rng.uniform(low=np.log(2), high=np.log(9))))
-    conv2 = int(np.exp(rng.uniform(low=np.log(6), high=np.log(24))))
-    conv3 = int(np.exp(rng.uniform(low=np.log(32), high=np.log(256))))
-    return nn.Sequential(
-        nn.Conv2d(1, conv1, 3, 1),
-        nn.MaxPool2d(2),
-        nn.Conv2d(conv1, conv2, 3, 1),
-        nn.MaxPool2d(2),
-        nn.Conv2d(conv2, conv3, 3, 1),
-        nn.ReLU(),
-    )
+    @staticmethod
+    def _random_mlp_mnist_model(rng: np.random.RandomState, **kwargs) -> nn.Module:
+        l1 = 2 ** (8 - int(np.exp(rng.uniform(low=np.log(1), high=np.log(3)))))
+        l2 = 2 ** (7 - int(np.exp(rng.uniform(low=np.log(1), high=np.log(4)))))
+        return nn.Sequential(
+            nn.Flatten(1),
+            nn.Linear(784, l1),
+            nn.ReLU(),
+            nn.Linear(l1, l2),
+            nn.ReLU(),
+            nn.Linear(l2, 10),
+            nn.LogSoftmax(1),
+        )
 
+    @staticmethod
+    def _random_mnist_loader(
+        rng: np.random.RandomState, **kwargs
+    ) -> Tuple[DataLoader, DataLoader]:
+        transform = transforms.Compose(
+            [transforms.ToTensor(), transforms.Normalize((0.1307,), (0.3081,))]
+        )
+        dataset1 = datasets.MNIST(
+            "data", train=True, download=True, transform=transform
+        )
+        train_size = int(len(dataset1) * kwargs["train_validation_ratio"])
+        train, val = torch.utils.data.random_split(
+            dataset1, [train_size, len(dataset1) - train_size]
+        )
+        train_loader = DataLoader(train, batch_size=2 ** kwargs["batch_size_exp"])
+        val_loader = DataLoader(val, batch_size=64)
+        return (train_loader, val_loader)
 
-def random_mnist_model(rng: np.random.RandomState, **kwargs) -> nn.Module:
-    f = random_feature_extractor(rng)
-    n_features = int(
-        torch.prod(torch.tensor(f(torch.zeros((1, 1, 28, 28))).shape)).item()
-    )
-    return nn.Sequential(f, nn.Flatten(1), nn.Linear(n_features, 10), nn.LogSoftmax(1))
-
-
-def random_mlp_mnist_model(rng: np.random.RandomState, **kwargs) -> nn.Module:
-    l1 = 2 ** (8 - int(np.exp(rng.uniform(low=np.log(1), high=np.log(3)))))
-    l2 = 2 ** (7 - int(np.exp(rng.uniform(low=np.log(1), high=np.log(4)))))
-    return nn.Sequential(
-        nn.Flatten(1),
-        nn.Linear(784, l1),
-        nn.ReLU(),
-        nn.Linear(l1, l2),
-        nn.ReLU(),
-        nn.Linear(l2, 10),
-        nn.LogSoftmax(1),
-    )
-
-
-def random_mnist_loader(rng: np.random.RandomState, **kwargs) -> Tuple[DataLoader, Any]:
-    transform = transforms.Compose(
-        [transforms.ToTensor(), transforms.Normalize((0.1307,), (0.3081,))]
-    )
-    train_kwargs = {"batch_size": 2 ** kwargs["batch_size_exp"]}
-    val_kwargs = {"batch_size": 64}
-    dataset1 = datasets.MNIST("data", train=True, download=True, transform=transform)
-    if "dataset_subset" in kwargs:
-        dataset1 = torch.utils.data.Subset(dataset1, kwargs["dataset_subset"])
-    train_size = int(len(dataset1) * kwargs["train_validation_ratio"])
-    train, val = torch.utils.data.random_split(
-        dataset1, [train_size, len(dataset1) - train_size]
-    )
-    train_loader = DataLoader(train, **train_kwargs)
-    val_loader = DataLoader(val, **val_kwargs)
-    return (train_loader, val_loader)
-
-
-def random_optimizer_parameters(rng, **kwargs):
-    return {
-        "betas": (1 - kwargs.get("beta1", 0.1), 1 - kwargs.get("beta2", 0.0001)),
-        "weight_decay": kwargs.get("weight_decay", 1e-2),
-        "eps": kwargs.get("eps", 1e-8),
-    }
-
-
-def random_mnist_instance(rng: np.random.RandomState, **kwargs):
-    model_types = ["CNN", "MLP"]
-    model_type = model_types[rng.randint(low=0, high=len(model_types))]
-    if model_type == "CNN":
-        model = random_mnist_model(rng, **kwargs)
-    elif model_type == "MLP":
-        model = random_mlp_mnist_model(rng, **kwargs)
-    else:
-        raise NotImplementedError
-    batch_size = 2 ** kwargs["batch_size_exp"]
-    loaders = random_mnist_loader(rng, **kwargs)
-    optimizer_params = random_optimizer_parameters(rng, **kwargs)
-    loss = F.nll_loss
-    cutoff = kwargs["cutoff"]
-    crash_penalty = np.log(0.1) * cutoff
-    return ["MNIST", model, optimizer_params, loss, batch_size, loaders, cutoff, crash_penalty]
-
-
-def random_instance(
-    rng: np.random.RandomState, cs: ConfigurationSpace, **kwargs
-) -> Instance:
-    datasets = ["MNIST"]
-    default_rng_state = torch.get_rng_state()
-    seed = rng.randint(1, 4294967295, dtype=np.int64)
-    cs.seed(seed)
-    torch.manual_seed(seed)
-    torch.cuda.manual_seed(seed)
-    torch.cuda.manual_seed_all(seed)
-    config = cs.sample_configuration()
-    idx = rng.randint(low=0, high=len(datasets))
-    dataset = datasets[idx]
-    if dataset == "MNIST":
-        instance = random_mnist_instance(rng, **config, **kwargs)
-    else:
-        raise NotImplementedError
-    torch.set_rng_state(default_rng_state)
-    instance[0] = dataset
-    SGDInstance.i = instance
-    return SGDInstance
-
-
-default_instance_generator: Generator = partial(
-    random_instance, cs=default_configuration_space()
-)
+    def _random_mnist_instance(self, rng: np.random.RandomState, **kwargs):
+        model_types = ["CNN", "MLP"]
+        model_type = model_types[rng.randint(low=0, high=len(model_types))]
+        if model_type == "CNN":
+            model = self._random_mnist_model(rng, **kwargs)
+        elif model_type == "MLP":
+            model = self._random_mlp_mnist_model(rng, **kwargs)
+        else:
+            raise NotImplementedError
+        batch_size = 2 ** kwargs["batch_size_exp"]
+        loaders = self._random_mnist_loader(rng, **kwargs)
+        optimizer_params = self._sample_optimizer_params(rng, **kwargs)
+        loss = F.nll_loss
+        cutoff = kwargs["cutoff"]
+        crash_penalty = np.log(0.1) * cutoff
+        train_validation_ratio = kwargs["train_validation_ratio"]
+        return (
+            model,
+            optimizer_params,
+            loss,
+            batch_size,
+            train_validation_ratio,
+            loaders,
+            cutoff,
+            crash_penalty,
+        )
