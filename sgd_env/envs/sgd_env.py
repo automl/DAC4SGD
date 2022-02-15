@@ -44,13 +44,14 @@ class SGDEnv(DACEnv):
 
     def step(self, action: float):
         done = self._step()
+        action = float(action)  # convert to float if we receive a tensor
         utils.optimizer_action(self.optimizer, "lr", {"lr": action})
         default_rng_state = torch.get_rng_state()
         torch.set_rng_state(self.env_rng_state)
         train_args = [
             self.model,
             self.optimizer,
-            self.loss,
+            self.loss_function,
             self.train_iter,
             1,
             self.device,
@@ -75,7 +76,7 @@ class SGDEnv(DACEnv):
             reward = self.crash_penalty
         elif done:
             reward = -utils.test(
-                self.model, self.loss, self.validation_loader, self.device
+                self.model, self.loss_function, self.validation_loader, self.device
             )
         else:
             reward = 0.0
@@ -92,7 +93,7 @@ class SGDEnv(DACEnv):
             self.dataset,
             self.model,
             optimizer_params,
-            self.loss,
+            self.loss_function,
             self.batch_size,
             (self.train_loader, self.validation_loader),
             self.cutoff,
@@ -116,7 +117,7 @@ class SGDEnv(DACEnv):
         (data, target) = next(self.train_iter)
         data, target = data.to(self.device), target.to(self.device)
         output = self.model(data)
-        loss = self.loss(output, target, reduction="none")
+        loss = self.loss_function(output, target, reduction="none")
         self.env_rng_state: torch.Tensor = torch.get_rng_state()
         torch.set_rng_state(default_rng_state)
         return {"step": 0, "loss": loss, "crashed": False}
