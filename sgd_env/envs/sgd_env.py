@@ -1,5 +1,5 @@
-from itertools import count, cycle
-from typing import Iterator, Optional, Tuple, Union, Type
+from functools import singledispatchmethod
+from typing import Iterator, Optional, Tuple, Union
 
 import gym
 import numpy as np
@@ -8,10 +8,10 @@ from gym import spaces
 from gym.utils import EzPickle, seeding
 
 from sgd_env.envs import utils
-from sgd_env.envs.generators import DefaultSGDGenerator, Instance
+from sgd_env.envs.generators import DefaultSGDGenerator, GeneratorIterator, Instance
 
 
-class SGDEnv(gym.Env, EzPickle):
+class DACEnv(gym.Env, EzPickle):
     def __init__(
         self,
         generator: DefaultSGDGenerator = DefaultSGDGenerator(),
@@ -22,6 +22,41 @@ class SGDEnv(gym.Env, EzPickle):
         self.n_instances = n_instances
         self.device = device
         self.seed()
+
+    @singledispatchmethod
+    def get_instance(self, instance: Optional[Union[Instance, int]]):
+        if instance is None:
+            return next(self.generator_iterator)
+        else:
+            raise ValueError(
+                "Invalid instance argument, either provide type 'Instance' or an 'int' ID."
+            )
+
+    @get_instance.register
+    def _(self, instance: Instance):
+        return instance
+
+    @get_instance.register
+    def _(self, instance: int):
+        return self.generator_iterator[instance]
+
+    def seed(self, seed=None):
+        self.np_random, _ = seeding.np_random(seed)
+        self.generator.seed(seed)
+        self.generator_iterator = GeneratorIterator(self.generator, self.n_instances)
+        torch.backends.cudnn.benchmark = False
+        torch.backends.cudnn.deterministic = True
+        return [seed]
+
+
+class SGDEnv(DACEnv):
+    def __init__(
+        self,
+        generator: DefaultSGDGenerator = DefaultSGDGenerator(),
+        n_instances: Union[int, float] = np.inf,
+        device: str = "cpu",
+    ):
+        super().__init__(generator, n_instances, device)
 
         self.action_space = spaces.Box(low=0.0, high=np.inf, shape=(1,))
         self._observation_space = None
@@ -83,45 +118,20 @@ class SGDEnv(gym.Env, EzPickle):
         self._step = 0
         default_rng_state = torch.get_rng_state()
 
-        if isinstance(instance, Instance):
-            self.instance = instance
-            (
-                self.dataset,
-                self.model,
-                optimizer_params,
-                self.loss_function,
-                self.batch_size,
-                self.train_validation_ratio,
-                (self.train_loader, self.validation_loader),
-                self.cutoff,
-                self.crash_penalty,
-            ) = instance
-        else:
-            if instance is None:
-                instance_idx = next(self.instance_count)
-            elif isinstance(instance, int):
-                instance_idx = instance
-            else:
-                raise NotImplementedError
+        self.instance = self.get_instance(instance)
 
-            assert instance_idx < self.n_instances
-
-            self.instance, seed = self.generator.get_instance(instance_idx)
-            torch.manual_seed(seed)
-            torch.cuda.manual_seed(seed)
-            torch.cuda.manual_seed_all(seed)
-            assert isinstance(self.instance, Instance)
-            (
-                self.dataset,
-                self.model,
-                optimizer_params,
-                self.loss_function,
-                self.batch_size,
-                self.train_validation_ratio,
-                (self.train_loader, self.validation_loader),
-                self.cutoff,
-                self.crash_penalty,
-            ) = self.instance
+        assert isinstance(self.instance, Instance)
+        (
+            self.dataset,
+            self.model,
+            optimizer_params,
+            self.loss_function,
+            self.batch_size,
+            self.train_validation_ratio,
+            (self.train_loader, self.validation_loader),
+            self.cutoff,
+            self.crash_penalty,
+        ) = self.instance
 
         self._observation_space = spaces.Dict(
             {
@@ -144,14 +154,3 @@ class SGDEnv(gym.Env, EzPickle):
         self.env_rng_state: torch.Tensor = torch.get_rng_state()
         torch.set_rng_state(default_rng_state)
         return {"step": 0, "loss": loss, "crashed": False}
-
-    def seed(self, seed=None):
-        self.np_random, _ = seeding.np_random(seed)
-        self.generator.seed(seed)
-        torch.backends.cudnn.benchmark = False
-        torch.backends.cudnn.deterministic = True
-        if self.n_instances == np.inf:
-            self.instance_count = count(start=0, step=1)
-        else:
-            self.instance_count = cycle(range(self.n_instances))
-        return [seed]

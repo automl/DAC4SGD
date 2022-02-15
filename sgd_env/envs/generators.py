@@ -1,27 +1,19 @@
-import sys
-from collections import namedtuple
-from dataclasses import dataclass, InitVar, field
-from functools import lru_cache, partial
-from typing import Any, Tuple, List, TypeVar, Generic, Optional, Union
 import abc
-
-if sys.version_info.minor >= 8:
-    from typing import Protocol
-else:
-    from typing_extensions import Protocol  # type: ignore
+from collections import namedtuple
+from dataclasses import InitVar, dataclass, field
+from itertools import count, cycle
+from typing import Any, Generic, List, Tuple, TypeVar, Union
 
 import numpy as np
 import torch
 import torch.nn.functional as F
-from ConfigSpace.hyperparameters import Hyperparameter
 from ConfigSpace import (
-    AndConjunction,
     ConfigurationSpace,
     Constant,
-    GreaterThanCondition,
     UniformFloatHyperparameter,
     UniformIntegerHyperparameter,
 )
+from ConfigSpace.hyperparameters import Hyperparameter
 from torch import nn
 from torch.utils.data.dataloader import DataLoader
 from torchvision import datasets, transforms
@@ -45,7 +37,7 @@ Instance = namedtuple(
 T = TypeVar("T")
 
 
-@dataclass(init=False)
+@dataclass(init=False)  # type: ignore
 class Generator(Generic[T], abc.ABC):
     _internal_rng: np.random.RandomState = np.random.RandomState(None)
     _instance_seeds: List[int] = field(default_factory=lambda: [])
@@ -60,11 +52,34 @@ class Generator(Generic[T], abc.ABC):
             self._instance_seeds.append(seed)
         seed = self._instance_seeds[instance_idx]
         rng = np.random.RandomState(seed)
-        return self.random_instance(rng), seed
+        return self.random_instance(rng)
 
     def seed(self, seed):
         self._internal_rng = np.random.RandomState(seed)  # Do not use it!
         self._instance_seeds: List[int] = []
+
+
+class GeneratorIterator(Generic[T]):
+    def __init__(
+        self, generator: Generator[T], n_instances: Union[int, float] = np.inf
+    ):
+        self.generator = generator
+        self.n_instances = n_instances
+        self.instance_count = (
+            count(start=0, step=1)
+            if self.n_instances == np.inf
+            else cycle(range(self.n_instances))
+        )
+
+    def __iter__(self):
+        return self
+
+    def __next__(self):
+        instance_idx = next(self.instance_count)
+        return self.generator.get_instance(instance_idx)
+
+    def __getitem__(self, instance_idx):
+        return self.generator.get_instance(instance_idx)
 
 
 @dataclass
@@ -193,8 +208,6 @@ class DefaultSGDGenerator(Generator[Instance]):
         transform = transforms.Compose(
             [transforms.ToTensor(), transforms.Normalize((0.1307,), (0.3081,))]
         )
-        train_kwargs = {"batch_size": 2 ** kwargs["batch_size_exp"]}
-        val_kwargs = {"batch_size": 64}
         dataset1 = datasets.MNIST(
             "data", train=True, download=True, transform=transform
         )
@@ -202,8 +215,8 @@ class DefaultSGDGenerator(Generator[Instance]):
         train, val = torch.utils.data.random_split(
             dataset1, [train_size, len(dataset1) - train_size]
         )
-        train_loader = DataLoader(train, **train_kwargs)
-        val_loader = DataLoader(val, **val_kwargs)
+        train_loader = DataLoader(train, batch_size=2 ** kwargs["batch_size_exp"])
+        val_loader = DataLoader(val, batch_size=64)
         return (train_loader, val_loader)
 
     def _random_mnist_instance(self, rng: np.random.RandomState, **kwargs):
