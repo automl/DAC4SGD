@@ -168,7 +168,8 @@ def random_instance(
     else:
         raise NotImplementedError
     torch.set_rng_state(default_rng_state)
-    SGDInstance.i = (dataset, *instance)
+    instance[0] = dataset
+    SGDInstance.i = instance
     return SGDInstance
 
 
