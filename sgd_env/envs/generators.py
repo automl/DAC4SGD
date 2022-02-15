@@ -1,5 +1,4 @@
 import sys
-from collections import namedtuple
 from functools import lru_cache, partial
 from typing import Any, Tuple
 
@@ -22,6 +21,8 @@ from ConfigSpace import (
 from torch import nn
 from torch.utils.data.dataloader import DataLoader
 from torchvision import datasets, transforms
+
+from dac4automlcomp.dac_env import Instance
 
 
 SGDInstance = Instance("SGDInstance", [
