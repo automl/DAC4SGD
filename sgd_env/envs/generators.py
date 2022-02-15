@@ -1,5 +1,4 @@
 import sys
-from collections import namedtuple
 from functools import lru_cache, partial
 from typing import Any, Tuple
 
@@ -23,9 +22,10 @@ from torch import nn
 from torch.utils.data.dataloader import DataLoader
 from torchvision import datasets, transforms
 
-Instance = namedtuple(
-    "Instance",
-    [
+from dac4automlcomp.dac_env import Instance, Generator
+
+
+SGDInstance = Instance("SGDInstance", [
         "dataset",
         "model",
         "optimizer_params",
@@ -33,14 +33,8 @@ Instance = namedtuple(
         "batch_size",
         "loaders",
         "cutoff",
-        "crash_penalty",
-    ],
+        "crash_penalty"],
 )
-
-
-class GeneratorFunc(Protocol):
-    def __call__(self, rng: np.random.RandomState, **kwargs: int) -> Instance:
-        ...
 
 
 @lru_cache(maxsize=None)
@@ -153,7 +147,7 @@ def random_mnist_instance(rng: np.random.RandomState, **kwargs):
     loss = F.nll_loss
     cutoff = kwargs["cutoff"]
     crash_penalty = np.log(0.1) * cutoff
-    return model, optimizer_params, loss, batch_size, loaders, cutoff, crash_penalty
+    return ["MNIST", model, optimizer_params, loss, batch_size, loaders, cutoff, crash_penalty]
 
 
 def random_instance(
@@ -174,9 +168,11 @@ def random_instance(
     else:
         raise NotImplementedError
     torch.set_rng_state(default_rng_state)
-    return Instance(dataset, *instance)
+    instance[0] = dataset
+    SGDInstance.i = instance
+    return SGDInstance
 
 
-default_instance_generator: GeneratorFunc = partial(
+default_instance_generator: Generator = partial(
     random_instance, cs=default_configuration_space()
 )
