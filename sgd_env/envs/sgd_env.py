@@ -16,7 +16,8 @@ class SGDEnv(DACEnv):
         n_instances: Union[int, float] = np.inf,
         device: str = "cpu",
     ):
-        super().__init__(generator, n_instances, device)
+        super().__init__(generator, n_instances)
+        self.device = device
 
         self.action_space = spaces.Box(low=0.0, high=np.inf, shape=(1,))
         self._observation_space = None
@@ -138,3 +139,8 @@ class SGDEnv(DACEnv):
             "validation_loss": None,
             "crashed": False,
         }
+
+    def seed(self, seed=None):
+        torch.backends.cudnn.benchmark = False
+        torch.backends.cudnn.deterministic = True
+        return super().seed(seed)
