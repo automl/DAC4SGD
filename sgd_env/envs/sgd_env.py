@@ -66,14 +66,26 @@ class SGDEnv(DACEnv):
                 torch.nn.utils.parameters_to_vector(self.model.parameters())
             ).any()
         )
-        state = {"step": self._step, "loss": loss, "crashed": crashed}
+        validation_loss = None
+        if self._step % len(self.train_loader) == 0:
+            print('Validation Loss')
+            validation_loss = utils.test(
+                self.model, self.loss_function, self.validation_loader, self.device
+            )
+        state = {
+            "step": self._step,
+            "loss": loss,
+            "validation_loss": validation_loss,
+            "crashed": crashed,
+        }
         done = self._step >= self.cutoff if not crashed else True
         if crashed:
             reward = self.crash_penalty
         elif done:
-            reward = -utils.test(
-                self.model, self.loss_function, self.validation_loader, self.device
+            test_losses = utils.test(
+                self.model, self.loss_function, self.test_loader, self.device
             )
+            reward = -test_losses.sum() / len(self.test_loader.dataset)
         else:
             reward = 0.0
         return state, reward, done, {}
@@ -92,7 +104,7 @@ class SGDEnv(DACEnv):
             self.loss_function,
             self.batch_size,
             self.train_validation_ratio,
-            (self.train_loader, self.validation_loader),
+            (self.train_loader, self.validation_loader, self.test_loader),
             self.cutoff,
             self.crash_penalty,
         ) = self.instance
@@ -101,6 +113,9 @@ class SGDEnv(DACEnv):
             {
                 "step": spaces.Box(0, self.cutoff, (1,)),
                 "loss": spaces.Box(0, np.inf, (self.batch_size,)),
+                "validation_loss": spaces.Box(
+                    0, np.inf, (len(self.test_loader.dataset),)
+                ),
                 "crashed": spaces.Discrete(1),
             }
         )
@@ -117,4 +132,9 @@ class SGDEnv(DACEnv):
         loss = self.loss_function(output, target, reduction="none")
         self.env_rng_state: torch.Tensor = torch.get_rng_state()
         torch.set_rng_state(default_rng_state)
-        return {"step": 0, "loss": loss, "crashed": False}
+        return {
+            "step": 0,
+            "loss": loss,
+            "validation_loss": None,
+            "crashed": False,
+        }

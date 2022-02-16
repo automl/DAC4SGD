@@ -24,11 +24,10 @@ def train(model, optimizer, loss_function, loader, steps, device="cpu"):
 
 def test(model, loss_function, loader, device="cpu"):
     model.eval()
-    test_loss = 0
+    test_losses = []
     with torch.no_grad():
         for data, target in loader:
             data, target = data.to(device), target.to(device)
             output = model(data)
-            test_loss += loss_function(output, target, reduction="sum").item()
-    test_loss /= len(loader.dataset)
-    return test_loss
+            test_losses.append(loss_function(output, target, reduction="none"))
+    return torch.cat(test_losses)

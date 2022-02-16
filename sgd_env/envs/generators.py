@@ -40,8 +40,8 @@ class DefaultSGDGenerator(Generator[SGDInstance]):
     batch_size_exp: InitVar[Hyperparameter] = UniformIntegerHyperparameter(
         "batch_size_exp", 2, 8, log=True
     )
-    train_validation_ratio: InitVar[Hyperparameter] = Constant(
-        "train_validation_ratio", 0.9
+    validation_train_percent: InitVar[Hyperparameter] = UniformIntegerHyperparameter(
+        "validation_train_percent", 1, 20, log=True, default_value=10
     )
     eps: InitVar[Hyperparameter] = UniformFloatHyperparameter(
         "eps",
@@ -156,20 +156,23 @@ class DefaultSGDGenerator(Generator[SGDInstance]):
     @staticmethod
     def _random_mnist_loader(
         rng: np.random.RandomState, **kwargs
-    ) -> Tuple[DataLoader, DataLoader]:
+    ) -> Tuple[DataLoader, DataLoader, DataLoader]:
         transform = transforms.Compose(
             [transforms.ToTensor(), transforms.Normalize((0.1307,), (0.3081,))]
         )
         dataset1 = datasets.MNIST(
             "data", train=True, download=True, transform=transform
         )
-        train_size = int(len(dataset1) * kwargs["train_validation_ratio"])
+        test = datasets.MNIST("data", train=False, transform=transform)
+        train_validation_ratio = 1 - kwargs["validation_train_percent"] / 100
+        train_size = int(len(dataset1) * train_validation_ratio)
         train, val = torch.utils.data.random_split(
             dataset1, [train_size, len(dataset1) - train_size]
         )
         train_loader = DataLoader(train, batch_size=2 ** kwargs["batch_size_exp"])
         val_loader = DataLoader(val, batch_size=64)
-        return (train_loader, val_loader)
+        test_loader = DataLoader(test, batch_size=64)
+        return (train_loader, val_loader, test_loader)
 
     def _random_mnist_instance(self, rng: np.random.RandomState, **kwargs):
         model_types = ["CNN", "MLP"]
@@ -186,7 +189,7 @@ class DefaultSGDGenerator(Generator[SGDInstance]):
         loss = F.nll_loss
         cutoff = kwargs["cutoff"]
         crash_penalty = np.log(0.1) * cutoff
-        train_validation_ratio = kwargs["train_validation_ratio"]
+        train_validation_ratio = 1 - kwargs["validation_train_percent"] / 100
         return (
             model,
             optimizer_params,
