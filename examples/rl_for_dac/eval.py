@@ -5,7 +5,7 @@ from pathlib import Path
 import stable_baselines3
 from stable_baselines3.common.base_class import BaseAlgorithm
 
-from sgd_env.policy.policy import AbstractPolicy
+from dac4automlcomp.dac_env import DACPolicy
 from sgd_env.envs import generators
 
 from examples.rl_for_dac.train import make_sgd_env
@@ -19,7 +19,7 @@ def load_agent(agent: str, model_fn: Union[str, Path]) -> BaseAlgorithm:
     return agent
 
 
-class SGDPolicy(AbstractPolicy):
+class SGDPolicy(DACPolicy):
     def __init__(self, agent: BaseAlgorithm, args: Optional[argparse.Namespace] = None, deterministic: bool = False):
         self.agent = agent
         self.args = args
@@ -29,10 +29,6 @@ class SGDPolicy(AbstractPolicy):
         # next_state will be None because we don't use an RNN
         action, next_state = self.agent.predict(observation=state, deterministic=self.deterministic)
         return action
-
-    def reset(self, instance: generators.Instance):
-        # We don't use instance features here so pass
-        pass
 
     def save(self, agent_fn: Union[str, Path]):
         agent_fn = Path(agent_fn)

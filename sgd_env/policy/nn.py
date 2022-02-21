@@ -4,7 +4,7 @@ from typing import List, Optional
 import torch
 from torch import nn
 
-from sgd_env.policy.policy import AbstractPolicy
+from dac4automlcomp.dac_env import DACPolicy
 
 
 def pairwise(iterable):
@@ -25,7 +25,7 @@ def create_ffn_layers(
     return layers
 
 
-class AbstractNetworkPolicy(AbstractPolicy):
+class AbstractNetworkPolicy(DACPolicy):
     def save(self, f):
         torch.save(self, f)
 

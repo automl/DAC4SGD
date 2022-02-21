@@ -5,7 +5,7 @@ from typing import List, Union
 import numpy as np
 import torch.optim
 
-from sgd_env.policy.policy import AbstractPolicy
+from dac4automlcomp.dac_env import DACPolicy
 
 
 class Serializable:
@@ -18,18 +18,15 @@ class Serializable:
 
 
 @dataclasses.dataclass
-class ConstantLRPolicy(Serializable, AbstractPolicy):
+class ConstantLRPolicy(Serializable, DACPolicy):
     lr: float
 
     def act(self, _):
         return self.lr
 
-    def reset(self, _):
-        pass
-
 
 @dataclasses.dataclass
-class CosineAnnealingLRPolicy(Serializable, AbstractPolicy):
+class CosineAnnealingLRPolicy(Serializable, DACPolicy):
     lr: float
 
     def act(self, state):
@@ -40,7 +37,7 @@ class CosineAnnealingLRPolicy(Serializable, AbstractPolicy):
 
 
 @dataclasses.dataclass
-class SimplePolicy(Serializable, AbstractPolicy):
+class SimplePolicy(Serializable, DACPolicy):
     lr: float
     a: float
     b: float
@@ -62,7 +59,7 @@ class SimplePolicy(Serializable, AbstractPolicy):
 
 
 @dataclasses.dataclass
-class ReduceLROnPlateauPolicy(Serializable, AbstractPolicy):
+class ReduceLROnPlateauPolicy(Serializable, DACPolicy):
     lr: float
     mode: str = "min"
     factor: float = 0.1
