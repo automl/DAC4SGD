@@ -4,7 +4,7 @@ import numpy as np
 import torch
 from gym import spaces
 
-from dac4automlcomp.dac_env import DACEnv
+from dac4automlcomp.dac_env import DACEnv, Generator
 from sgd_env.envs import utils
 from sgd_env.envs.generators import DefaultSGDGenerator, SGDInstance
 
@@ -12,7 +12,7 @@ from sgd_env.envs.generators import DefaultSGDGenerator, SGDInstance
 class SGDEnv(DACEnv):
     def __init__(
         self,
-        generator: DefaultSGDGenerator = DefaultSGDGenerator(),
+        generator: Generator[SGDInstance] = DefaultSGDGenerator(),
         n_instances: Union[int, float] = np.inf,
         device: str = "cpu",
     ):
