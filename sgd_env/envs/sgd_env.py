@@ -10,7 +10,7 @@ from sgd_env.envs import utils
 from sgd_env.envs.generators import DefaultSGDGenerator, SGDInstance
 
 
-class SGDEnv(DACEnv):
+class SGDEnv(DACEnv[SGDInstance]):
     def __init__(
         self,
         generator: Generator[SGDInstance] = DefaultSGDGenerator(),
@@ -36,7 +36,7 @@ class SGDEnv(DACEnv):
             )
         return self._observation_space
 
-    @DACEnv.get_instance.register
+    @DACEnv._get_instance.register
     def _(self, instance: SGDInstance):
         return instance
 
@@ -92,12 +92,11 @@ class SGDEnv(DACEnv):
         return state, reward, done, {}
 
     def reset(self, instance: Optional[Union[SGDInstance, int]] = None):
+        super().reset(instance)
         self._step = 0
         default_rng_state = torch.get_rng_state()
 
-        self.instance = self.get_instance(instance)
-
-        assert isinstance(self.instance, SGDInstance)
+        assert isinstance(self.current_instance, SGDInstance)
         (
             self.dataset,
             self.model,
@@ -108,7 +107,7 @@ class SGDEnv(DACEnv):
             (self.train_loader, self.validation_loader, self.test_loader),
             self.cutoff,
             self.crash_penalty,
-        ) = self.instance
+        ) = self.current_instance
 
         self._observation_space = spaces.Dict(
             {

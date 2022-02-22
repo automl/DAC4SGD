@@ -17,7 +17,7 @@ class SchedulerPolicyAction(argparse.Action):
 
 def run_policy(env, policy, instance=None):
     obs = env.reset(instance=instance)
-    policy.reset(env.instance)
+    policy.reset(env.current_instance)
     done = False
     states = []
     rewards = []
