@@ -70,7 +70,6 @@ class SGDEnv(DACEnv):
         )
         validation_loss = None
         if self._step % len(self.train_loader) == 0:
-            print('Validation Loss')
             validation_loss = utils.test(
                 self.model, self.loss_function, self.validation_loader, self.device
             )

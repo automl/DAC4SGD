@@ -7,7 +7,6 @@ import torch
 import torch.nn.functional as F
 from ConfigSpace import (
     ConfigurationSpace,
-    Constant,
     UniformFloatHyperparameter,
     UniformIntegerHyperparameter,
 )
