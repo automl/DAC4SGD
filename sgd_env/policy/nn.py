@@ -4,7 +4,7 @@ from typing import List, Optional
 import torch
 from torch import nn
 
-from dac4automlcomp.dac_env import DACPolicy
+from dac4automlcomp.policy import DACPolicy
 
 
 def pairwise(iterable):

@@ -5,7 +5,7 @@ from pathlib import Path
 import stable_baselines3
 from stable_baselines3.common.base_class import BaseAlgorithm
 
-from dac4automlcomp.dac_env import DACPolicy
+from dac4automlcomp.policy import DACPolicy
 from sgd_env.envs import generators
 
 from examples.rl_for_dac.train import make_sgd_env

@@ -4,7 +4,8 @@ import numpy as np
 import torch
 from gym import spaces
 
-from dac4automlcomp.dac_env import DACEnv, Generator
+from dac4automlcomp.dac_env import DACEnv
+from dac4automlcomp.generator import Generator
 from sgd_env.envs import utils
 from sgd_env.envs.generators import DefaultSGDGenerator, SGDInstance
 

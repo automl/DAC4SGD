@@ -16,7 +16,7 @@ from torch import nn
 from torch.utils.data.dataloader import DataLoader
 from torchvision import datasets, transforms
 
-from dac4automlcomp.dac_env import Generator
+from dac4automlcomp.generator import Generator
 
 SGDInstance = namedtuple(
     "SGDInstance",

@@ -1,7 +1,6 @@
 import argparse
 
 import sgd_env.policy.schedulers
-from dac4automlcomp.dac_env import StatefulPolicy
 
 
 class SchedulerPolicyAction(argparse.Action):
@@ -18,8 +17,7 @@ class SchedulerPolicyAction(argparse.Action):
 
 def run_policy(env, policy, instance=None):
     obs = env.reset(instance=instance)
-    if isinstance(env, StatefulPolicy):
-        policy.reset(env.instance)
+    policy.reset(env.instance)
     done = False
     states = []
     rewards = []

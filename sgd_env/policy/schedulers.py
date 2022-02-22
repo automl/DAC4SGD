@@ -5,7 +5,7 @@ from typing import List, Union
 import numpy as np
 import torch.optim
 
-from dac4automlcomp.dac_env import DACPolicy
+from dac4automlcomp.policy import DACPolicy
 
 
 class Serializable:
@@ -23,6 +23,9 @@ class ConstantLRPolicy(Serializable, DACPolicy):
 
     def act(self, _):
         return self.lr
+
+    def reset(self, instance):
+        pass
 
 
 @dataclasses.dataclass
