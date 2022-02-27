@@ -10,7 +10,7 @@ from sgd_env.envs import utils
 from sgd_env.envs.generators import DefaultSGDGenerator, SGDInstance
 
 
-class SGDEnv(DACEnv[SGDInstance]):
+class SGDEnv(DACEnv[SGDInstance], instance_type=SGDInstance):
     def __init__(
         self,
         generator: Generator[SGDInstance] = DefaultSGDGenerator(),
@@ -35,10 +35,6 @@ class SGDEnv(DACEnv[SGDInstance]):
                 "observation space will stay fixed."
             )
         return self._observation_space
-
-    @DACEnv._get_instance.register
-    def _(self, instance: SGDInstance):
-        return instance
 
     def step(self, action: float):
         action = float(action)  # convert to float if we receive a tensor
