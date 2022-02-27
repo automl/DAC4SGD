@@ -11,6 +11,14 @@ from sgd_env.envs.generators import DefaultSGDGenerator, SGDInstance
 
 
 class SGDEnv(DACEnv[SGDInstance], instance_type=SGDInstance):
+    """SGD Environment runs training every episode on procedurally
+       generated instances using given instance generator.
+       For observation space check `observation_space` method docstring.
+       Reward;
+           negative loss on test_loader of the instance  if done and not crashed
+           crash_penalty of the instance                 if crashed
+           0                                             otherwise
+    """
     def __init__(
         self,
         generator: Generator[SGDInstance] = DefaultSGDGenerator(),
@@ -26,9 +34,15 @@ class SGDEnv(DACEnv[SGDInstance], instance_type=SGDInstance):
 
     @property
     def observation_space(self):
+        """Current observation space includes;
+            step: Current optimization step
+            loss: Training loss
+            validation_loss: Validation loss at the end of every epoch else None
+            crashed: True if weights, gradients, reward become NaN/inf else False
+        """
         if self._observation_space is None:
             raise ValueError(
-                "Observation space changes for every instance. "
+                "Observation space size changes for every instance. "
                 "It is set after every reset. "
                 "Use a provided wrapper or handle it manually. "
                 "If batch size is fixed for every instance, "
@@ -36,9 +50,9 @@ class SGDEnv(DACEnv[SGDInstance], instance_type=SGDInstance):
             )
         return self._observation_space
 
-    def step(self, action: float):
-        action = float(action)  # convert to float if we receive a tensor
-        utils.optimizer_action(self.optimizer, "lr", {"lr": action})
+    def step(self, lr: float):
+        """Do one optimization (forward, backward, update) step on current instance using given `lr`."""
+        utils.optimizer_action(self.optimizer, "lr", {"lr": float(lr)})
         default_rng_state = torch.get_rng_state()
         torch.set_rng_state(self.env_rng_state)
         train_args = [
@@ -65,7 +79,7 @@ class SGDEnv(DACEnv[SGDInstance], instance_type=SGDInstance):
             ).any()
         )
         validation_loss = None
-        if self._step % len(self.train_loader) == 0:
+        if self._step % len(self.train_loader) == 0:  # Calculate validation loss at the end of an epoch
             validation_loss = utils.test(
                 self.model, self.loss_function, self.validation_loader, self.device
             )

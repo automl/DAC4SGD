@@ -20,15 +20,15 @@ from dac4automlcomp.generator import Generator
 SGDInstance = namedtuple(
     "SGDInstance",
     [
-        "dataset",
-        "model",
-        "optimizer_params",
-        "loss",
+        "dataset",  # Name of the dataset
+        "model",  # Initialized torch.nn.Module model
+        "optimizer_params",  # kwargs for optimizer initializing excluding parameters
+        "loss",  # Callable loss function with torch.nn.functional API
         "batch_size",
-        "train_validation_ratio",
-        "loaders",
-        "cutoff",
-        "crash_penalty",
+        "train_validation_ratio",  # Train dataset size / validation dataset size
+        "loaders",  # train loader, validation_loader, test_loader
+        "cutoff",  # Number of optimization steps
+        "crash_penalty",  # Received reward when environment crashes
     ],
 )
 
@@ -115,8 +115,7 @@ class DefaultSGDGenerator(Generator[SGDInstance]):
             "betas": (1 - samples["inv_beta1"], 1 - samples["inv_beta2"]),
         }
 
-    @staticmethod
-    def _random_feature_extractor(rng: np.random.RandomState, **kwargs) -> nn.Module:
+    def _random_feature_extractor(self, rng: np.random.RandomState, **kwargs) -> nn.Module:
         conv1 = int(np.exp(rng.uniform(low=np.log(2), high=np.log(9))))
         conv2 = int(np.exp(rng.uniform(low=np.log(6), high=np.log(24))))
         conv3 = int(np.exp(rng.uniform(low=np.log(32), high=np.log(256))))
@@ -138,8 +137,7 @@ class DefaultSGDGenerator(Generator[SGDInstance]):
             f, nn.Flatten(1), nn.Linear(n_features, 10), nn.LogSoftmax(1)
         )
 
-    @staticmethod
-    def _random_mlp_mnist_model(rng: np.random.RandomState, **kwargs) -> nn.Module:
+    def _random_mlp_mnist_model(self, rng: np.random.RandomState, **kwargs) -> nn.Module:
         l1 = 2 ** (8 - int(np.exp(rng.uniform(low=np.log(1), high=np.log(3)))))
         l2 = 2 ** (7 - int(np.exp(rng.uniform(low=np.log(1), high=np.log(4)))))
         return nn.Sequential(
@@ -152,8 +150,8 @@ class DefaultSGDGenerator(Generator[SGDInstance]):
             nn.LogSoftmax(1),
         )
 
-    @staticmethod
     def _random_mnist_loader(
+        self,
         rng: np.random.RandomState, **kwargs
     ) -> Tuple[DataLoader, DataLoader, DataLoader]:
         transform = transforms.Compose(
