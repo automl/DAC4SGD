@@ -11,13 +11,20 @@ from sgd_env.envs.generators import DefaultSGDGenerator, SGDInstance
 
 
 class SGDEnv(DACEnv[SGDInstance], instance_type=SGDInstance):
-    """SGD Environment runs training every episode on procedurally
-       generated instances using given instance generator.
+    """
+       The SGD DAC Environment implements the problem of dynamically configuring the learning rate hyperparameter of
+       a neural network optimizer (more specifically, torch.optim.AdamW) for a supervised learning task.
+
+       Actions correspond to learning rate values in [0,+inf[
        For observation space check `observation_space` method docstring.
-       Reward;
+       For instance space check the `SGDInstance` class docstring
+       Reward:
            negative loss on test_loader of the instance  if done and not crashed
-           crash_penalty of the instance                 if crashed
+           crash_penalty of the instance                 if crashed (also always done=True)
            0                                             otherwise
+
+        Note: This is the environment that will be used for evaluating your submission.
+        Feel free to adapt it (e.g., using reward shaping) for training your policy.
     """
     def __init__(
         self,
@@ -36,7 +43,7 @@ class SGDEnv(DACEnv[SGDInstance], instance_type=SGDInstance):
     def observation_space(self):
         """Current observation space includes;
             step: Current optimization step
-            loss: Training loss
+            loss: The mini batch training loss
             validation_loss: Validation loss at the end of every epoch else None
             crashed: True if weights, gradients, reward become NaN/inf else False
         """
@@ -51,7 +58,10 @@ class SGDEnv(DACEnv[SGDInstance], instance_type=SGDInstance):
         return self._observation_space
 
     def step(self, lr: float):
-        """Do one optimization (forward, backward, update) step on current instance using given `lr`."""
+        """
+        Update the parameters of the neural network using the given learning rate lr,
+        in the direction specified by AdamW, and if not done (crashed/cutoff reached),
+        performs another forward/backward pass (update only in the next step)."""
         utils.optimizer_action(self.optimizer, "lr", {"lr": float(lr)})
         default_rng_state = torch.get_rng_state()
         torch.set_rng_state(self.env_rng_state)
@@ -102,6 +112,8 @@ class SGDEnv(DACEnv[SGDInstance], instance_type=SGDInstance):
         return state, reward, done, {}
 
     def reset(self, instance: Optional[Union[SGDInstance, int]] = None):
+        """Initialize the neural network, data loaders, etc. for given/random next task. Also perform a single
+        forward/backward pass, not yet updating the neural network parameters."""
         super().reset(instance)
         self._step = 0
         default_rng_state = torch.get_rng_state()
