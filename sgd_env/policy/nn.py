@@ -4,7 +4,7 @@ from typing import List, Optional
 import torch
 from torch import nn
 
-from dac4automlcomp.policy import DACPolicy
+from dac4automlcomp.policy import DACPolicy, DeterministicPolicy
 
 
 def pairwise(iterable):
@@ -25,13 +25,15 @@ def create_ffn_layers(
     return layers
 
 
-class AbstractNetworkPolicy(DACPolicy):
-    def save(self, f):
-        torch.save(self, f)
+class AbstractNetworkPolicy(DeterministicPolicy, DACPolicy):
+    def save(self, path):
+        file_path = path / f"{self.__class__.__name__}.pt"
+        torch.save(self, file_path)
 
     @classmethod
-    def load(cls, f):
-        return torch.load(f)
+    def load(cls, path):
+        file_path = path / f"{cls.__name__}.pt"
+        return torch.load(file_path)
 
 
 class FFN(AbstractNetworkPolicy):

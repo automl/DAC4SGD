@@ -5,20 +5,24 @@ from typing import List, Union
 import numpy as np
 import torch.optim
 
-from dac4automlcomp.policy import DACPolicy
+from dac4automlcomp.policy import DACPolicy, DeterministicPolicy
 
 
 class Serializable:
-    def save(self, f):
-        json.dump(dataclasses.asdict(self), f)
+    def save(self, path):
+        file_path = path / f"{self.__class__.__name__}.json"
+        with file_path.open(mode="w") as f:
+            json.dump(dataclasses.asdict(self), f)
 
     @classmethod
-    def load(cls, f):
-        return cls(**json.load(f))
+    def load(cls, path):
+        file_path = path / f"{cls.__name__}.json"
+        with file_path.open(mode="r") as f:
+            return cls(**json.load(f))
 
 
 @dataclasses.dataclass
-class ConstantLRPolicy(Serializable, DACPolicy):
+class ConstantLRPolicy(Serializable, DeterministicPolicy, DACPolicy):
     lr: float
 
     def act(self, _):
@@ -29,7 +33,7 @@ class ConstantLRPolicy(Serializable, DACPolicy):
 
 
 @dataclasses.dataclass
-class CosineAnnealingLRPolicy(Serializable, DACPolicy):
+class CosineAnnealingLRPolicy(Serializable, DeterministicPolicy, DACPolicy):
     lr: float
 
     def act(self, state):
@@ -40,7 +44,7 @@ class CosineAnnealingLRPolicy(Serializable, DACPolicy):
 
 
 @dataclasses.dataclass
-class SimplePolicy(Serializable, DACPolicy):
+class SimplePolicy(Serializable, DeterministicPolicy, DACPolicy):
     lr: float
     a: float
     b: float
@@ -62,7 +66,7 @@ class SimplePolicy(Serializable, DACPolicy):
 
 
 @dataclasses.dataclass
-class ReduceLROnPlateauPolicy(Serializable, DACPolicy):
+class ReduceLROnPlateauPolicy(Serializable, DeterministicPolicy, DACPolicy):
     lr: float
     mode: str = "min"
     factor: float = 0.1
