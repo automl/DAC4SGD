@@ -85,11 +85,13 @@ class DefaultSGDGenerator(Generator[SGDInstance]):
         torch.cuda.manual_seed(seed)
         torch.cuda.manual_seed_all(seed)
         config = self.cs.sample_configuration()
-        dataset_types = ["MNIST", "CIFAR10"]
+        dataset_types = ["MNIST", "CIFAR10", "FashionMNIST"]
         idx = rng.randint(low=0, high=len(dataset_types))
         dataset = dataset_types[idx]
         if dataset == "MNIST":
             instance = self._random_mnist_instance(rng, **config)
+        elif dataset == "FashionMNIST":
+            instance = self._random_fashion_mnist_instance(rng, **config)
         elif dataset == "CIFAR10":
             instance = self._random_cifar10_instance(rng, **config)
         else:
@@ -193,6 +195,28 @@ class DefaultSGDGenerator(Generator[SGDInstance]):
         test_loader = DataLoader(test, batch_size=64)
         return (train_loader, val_loader, test_loader)
 
+    def _random_fashion_mnist_loader(
+        self,
+        rng: np.random.RandomState, **kwargs
+    ) -> Tuple[DataLoader, DataLoader, DataLoader]:
+        """Loads FashionMNIST dataset from `torchvision.datasets."""
+        transform = transforms.Compose(
+            [transforms.ToTensor(), transforms.Normalize((0.5,), (0.5,))]
+        )
+        dataset1 = datasets.FashionMNIST(
+            "data", train=True, download=True, transform=transform
+        )
+        test = datasets.FashionMNIST("data", train=False, transform=transform)
+        train_validation_ratio = 1 - kwargs["validation_train_percent"] / 100
+        train_size = int(len(dataset1) * train_validation_ratio)
+        train, val = torch.utils.data.random_split(
+            dataset1, [train_size, len(dataset1) - train_size]
+        )
+        train_loader = DataLoader(train, batch_size=2 ** kwargs["batch_size_exp"])
+        val_loader = DataLoader(val, batch_size=64)
+        test_loader = DataLoader(test, batch_size=64)
+        return (train_loader, val_loader, test_loader)
+
     def _random_cifar10_loader(
         self,
         rng: np.random.RandomState, **kwargs
@@ -247,6 +271,34 @@ class DefaultSGDGenerator(Generator[SGDInstance]):
             raise NotImplementedError
         batch_size = 2 ** kwargs["batch_size_exp"]
         loaders = self._random_mnist_loader(rng, **kwargs)
+        optimizer_params = self._sample_optimizer_params(rng, **kwargs)
+        loss = F.nll_loss
+        cutoff = kwargs["cutoff"]
+        crash_penalty = np.log(0.1) * cutoff
+        train_validation_ratio = 1 - kwargs["validation_train_percent"] / 100
+        return (
+            model,
+            optimizer_params,
+            loss,
+            batch_size,
+            train_validation_ratio,
+            loaders,
+            cutoff,
+            crash_penalty,
+        )
+
+    def _random_fashion_mnist_instance(self, rng: np.random.RandomState, **kwargs):
+        """Samples a random FashionMNIST instance."""
+        model_types = ["CNN", "MLP"]
+        model_type = model_types[rng.randint(low=0, high=len(model_types))]
+        if model_type == "CNN":
+            model = self._random_mnist_model(rng, **kwargs)
+        elif model_type == "MLP":
+            model = self._random_mlp_mnist_model(rng, **kwargs)
+        else:
+            raise NotImplementedError
+        batch_size = 2 ** kwargs["batch_size_exp"]
+        loaders = self._random_fashion_mnist_loader(rng, **kwargs)
         optimizer_params = self._sample_optimizer_params(rng, **kwargs)
         loss = F.nll_loss
         cutoff = kwargs["cutoff"]
