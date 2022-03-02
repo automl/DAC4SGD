@@ -85,11 +85,13 @@ class DefaultSGDGenerator(Generator[SGDInstance]):
         torch.cuda.manual_seed(seed)
         torch.cuda.manual_seed_all(seed)
         config = self.cs.sample_configuration()
-        dataset_types = ["MNIST"]
+        dataset_types = ["MNIST", "CIFAR10"]
         idx = rng.randint(low=0, high=len(dataset_types))
         dataset = dataset_types[idx]
         if dataset == "MNIST":
             instance = self._random_mnist_instance(rng, **config)
+        elif dataset == "CIFAR10":
+            instance = self._random_cifar10_instance(rng, **config)
         else:
             raise NotImplementedError
         torch.set_rng_state(default_rng_state)
@@ -121,13 +123,13 @@ class DefaultSGDGenerator(Generator[SGDInstance]):
             "betas": (1 - samples["inv_beta1"], 1 - samples["inv_beta2"]),
         }
 
-    def _random_feature_extractor(self, rng: np.random.RandomState, **kwargs) -> nn.Module:
+    def _random_feature_extractor(self, rng: np.random.RandomState, c, **kwargs) -> nn.Module:
         """Dataset agnostic CNN architecture without an output layer."""
         conv1 = int(np.exp(rng.uniform(low=np.log(2), high=np.log(9))))
         conv2 = int(np.exp(rng.uniform(low=np.log(6), high=np.log(24))))
         conv3 = int(np.exp(rng.uniform(low=np.log(32), high=np.log(256))))
         return nn.Sequential(
-            nn.Conv2d(1, conv1, 3, 1),
+            nn.Conv2d(c, conv1, 3, 1),
             nn.MaxPool2d(2),
             nn.Conv2d(conv1, conv2, 3, 1),
             nn.MaxPool2d(2),
@@ -137,9 +139,19 @@ class DefaultSGDGenerator(Generator[SGDInstance]):
 
     def _random_mnist_model(self, rng: np.random.RandomState, **kwargs) -> nn.Module:
         """Creates an MNIST CNN model using `_random_feature_extractor`."""
-        f = self._random_feature_extractor(rng)
+        f = self._random_feature_extractor(rng, 1, **kwargs)
         n_features = int(
             torch.prod(torch.tensor(f(torch.zeros((1, 1, 28, 28))).shape)).item()
+        )
+        return nn.Sequential(
+            f, nn.Flatten(1), nn.Linear(n_features, 10), nn.LogSoftmax(1)
+        )
+
+    def _random_cifar10_model(self, rng: np.random.RandomState, **kwargs) -> nn.Module:
+        """Creates an CIFAR10 CNN model using `_random_feature_extractor`."""
+        f = self._random_feature_extractor(rng, 3, **kwargs)
+        n_features = int(
+            torch.prod(torch.tensor(f(torch.zeros((1, 3, 32, 32))).shape)).item()
         )
         return nn.Sequential(
             f, nn.Flatten(1), nn.Linear(n_features, 10), nn.LogSoftmax(1)
@@ -180,6 +192,48 @@ class DefaultSGDGenerator(Generator[SGDInstance]):
         val_loader = DataLoader(val, batch_size=64)
         test_loader = DataLoader(test, batch_size=64)
         return (train_loader, val_loader, test_loader)
+
+    def _random_cifar10_loader(
+        self,
+        rng: np.random.RandomState, **kwargs
+    ) -> Tuple[DataLoader, DataLoader, DataLoader]:
+        """Loads CIFAR10 dataset from `torchvision.datasets."""
+        transform = transforms.Compose(
+            [transforms.ToTensor(),
+             transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))])
+        dataset1 = datasets.CIFAR10(
+            "data", train=True, download=True, transform=transform
+        )
+        test = datasets.CIFAR10("data", train=False, transform=transform)
+        train_validation_ratio = 1 - kwargs["validation_train_percent"] / 100
+        train_size = int(len(dataset1) * train_validation_ratio)
+        train, val = torch.utils.data.random_split(
+            dataset1, [train_size, len(dataset1) - train_size]
+        )
+        train_loader = DataLoader(train, batch_size=2 ** kwargs["batch_size_exp"])
+        val_loader = DataLoader(val, batch_size=64)
+        test_loader = DataLoader(test, batch_size=64)
+        return (train_loader, val_loader, test_loader)
+
+    def _random_cifar10_instance(self, rng: np.random.RandomState, **kwargs):
+        model = self._random_cifar10_model(rng, **kwargs)
+        batch_size = 2 ** kwargs["batch_size_exp"]
+        loaders = self._random_cifar10_loader(rng, **kwargs)
+        optimizer_params = self._sample_optimizer_params(rng, **kwargs)
+        loss = F.nll_loss
+        cutoff = kwargs["cutoff"]
+        crash_penalty = np.log(0.1) * cutoff
+        train_validation_ratio = 1 - kwargs["validation_train_percent"] / 100
+        return (
+            model,
+            optimizer_params,
+            loss,
+            batch_size,
+            train_validation_ratio,
+            loaders,
+            cutoff,
+            crash_penalty,
+        )
 
     def _random_mnist_instance(self, rng: np.random.RandomState, **kwargs):
         """Samples a random MNIST instance."""
