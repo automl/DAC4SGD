@@ -72,10 +72,12 @@ class DefaultSGDGenerator(Generator[SGDInstance]):
     )
 
     def __post_init__(self, *args):
+        """Initialize configuration space using `InitVar` arguments of the class."""
         self.cs = ConfigurationSpace()
         self.cs.add_hyperparameters(args)
 
     def random_instance(self, rng):
+        """Samples a random `SGDInstance`"""
         default_rng_state = torch.get_rng_state()
         seed = rng.randint(1, 4294967295, dtype=np.int64)
         self.cs.seed(seed)
@@ -94,6 +96,10 @@ class DefaultSGDGenerator(Generator[SGDInstance]):
         return SGDInstance(dataset, *instance)
 
     def _sample_optimizer_params(self, rng, **kwargs):
+        """Samples optimizer parameters according to below rules.
+        - With 0.8 probability keep default of all parameters
+        - For each hyperparameter, with 0.5 probability sample a new value else keep default
+        """
         modify = rng.rand()
         samples = {
             parameter: (
@@ -116,6 +122,7 @@ class DefaultSGDGenerator(Generator[SGDInstance]):
         }
 
     def _random_feature_extractor(self, rng: np.random.RandomState, **kwargs) -> nn.Module:
+        """Dataset agnostic CNN architecture without an output layer."""
         conv1 = int(np.exp(rng.uniform(low=np.log(2), high=np.log(9))))
         conv2 = int(np.exp(rng.uniform(low=np.log(6), high=np.log(24))))
         conv3 = int(np.exp(rng.uniform(low=np.log(32), high=np.log(256))))
@@ -129,6 +136,7 @@ class DefaultSGDGenerator(Generator[SGDInstance]):
         )
 
     def _random_mnist_model(self, rng: np.random.RandomState, **kwargs) -> nn.Module:
+        """Creates an MNIST CNN model using `_random_feature_extractor`."""
         f = self._random_feature_extractor(rng)
         n_features = int(
             torch.prod(torch.tensor(f(torch.zeros((1, 1, 28, 28))).shape)).item()
@@ -138,6 +146,7 @@ class DefaultSGDGenerator(Generator[SGDInstance]):
         )
 
     def _random_mlp_mnist_model(self, rng: np.random.RandomState, **kwargs) -> nn.Module:
+        """Creates an MNIST MLP model."""
         l1 = 2 ** (8 - int(np.exp(rng.uniform(low=np.log(1), high=np.log(3)))))
         l2 = 2 ** (7 - int(np.exp(rng.uniform(low=np.log(1), high=np.log(4)))))
         return nn.Sequential(
@@ -154,6 +163,7 @@ class DefaultSGDGenerator(Generator[SGDInstance]):
         self,
         rng: np.random.RandomState, **kwargs
     ) -> Tuple[DataLoader, DataLoader, DataLoader]:
+        """Loads MNIST dataset from `torchvision.datasets."""
         transform = transforms.Compose(
             [transforms.ToTensor(), transforms.Normalize((0.1307,), (0.3081,))]
         )
@@ -172,6 +182,7 @@ class DefaultSGDGenerator(Generator[SGDInstance]):
         return (train_loader, val_loader, test_loader)
 
     def _random_mnist_instance(self, rng: np.random.RandomState, **kwargs):
+        """Samples a random MNIST instance."""
         model_types = ["CNN", "MLP"]
         model_type = model_types[rng.randint(low=0, high=len(model_types))]
         if model_type == "CNN":
