@@ -54,7 +54,7 @@ class SGDEnvObservationWrapper(ObservationWrapper):
         return obs
 
 
-class SGDEnvActionWrapper(ActionWrapper):
+class SGDEnvActionWrapper(ActionWrapper):  # TODO move log conversion inside policy
     def action(self, action):
         action_log = th.tensor(action)
         # convert log action to normal action
