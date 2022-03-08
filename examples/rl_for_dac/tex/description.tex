@@ -1,0 +1,117 @@
+\documentclass[11pt, final]{article}
+
+% This file will be kept up-to-date at the following GitHub repository:
+%
+% https://github.com/automl-conf/LatexTemplate
+%
+% Please file any issues/bug reports, etc. you may have at:
+%
+% https://github.com/automl-conf/LatexTemplate/issues
+
+\usepackage{microtype} % microtypography
+\usepackage{booktabs}  % tables
+\usepackage{url}  % url
+
+
+% AMS math
+\usepackage{amsmath}
+\usepackage{amsthm}
+
+% With no package options, the submission will be anonymized, the supplemental
+% material will be suppressed, and line numbers will be added to the manuscript.
+%
+% To hide the supplementary material (e.g., for the first submission deadline),
+% use the [hidesupplement] option:
+%
+% \usepackage[hidesupplement]{automl}
+%
+% To compile a non-anonymized camera-ready version, add the [final] option:
+%
+% \usepackage[final]{automl}
+%
+% or
+%
+% \usepackage[final, hidesupplement]{automl}
+
+\usepackage[hidesupplement]{automl}
+
+% You may use any reference style as long as you are consistent throughout the
+% document. As a default we suggest author--year citations; for bibtex and
+% natbib you may use:
+
+\usepackage{natbib}
+\bibliographystyle{apalike}
+
+% and for biber and biblatex you may use:
+
+% \usepackage[%
+%   backend=biber,
+%   style=authoryear-comp,
+%   sortcites=true,
+%   natbib=true,
+%   giveninits=true,
+%   maxcitenames=2,
+%   doi=false,
+%   url=true,
+%   isbn=false,
+%   dashed=false
+% ]{biblatex}
+% \addbibresource{...}
+
+\title{Learn To Control The Learning Rate with Reinforcement Learning}
+
+% The syntax for adding an author is
+%
+% \author[i]{\nameemail{author name}{author email}}
+%
+% where i is an affiliation counter. Authors may have
+% multiple affiliations; e.g.:
+%
+% \author[1,2]{\nameemail{Anonymous}{anonymous@example.com}}
+
+\author[1]{\nameemail{Author 1}{email1@example.com}}
+
+% the list might continue:
+% \author[2,3]{\nameemail{Author 2}{email2@example.com}}
+% \author[3]{\nameemail{Author 3}{email3@example.com}}
+% \author[4]{\nameemail{Author 4}{email4@example.com}}
+
+% if you need to force a linebreak in the author list, prepend an \author entry
+% with \\:
+
+% \author[3]{\\\nameemail{Author 5}{email5@example.com}}
+
+% Specify corresponding affiliations after authors, referring to counter used in
+% \author:
+
+\affil[1]{\url{https://www.AutoML.org}}
+
+% the list might continue:
+% \affil[2]{Institution 2}
+% \affil[3]{Institution 3}
+% \affil[4]{Institution 4}
+
+% define PDF metadata, please fill in to aid in accessibility of the resulting PDF
+\hypersetup{%
+  pdfauthor={}, % will be reset to "Anonymous" unless the "final" package option is given
+  pdftitle={},
+  pdfsubject={},
+  pdfkeywords={}
+}
+
+\begin{document}
+
+\maketitle
+
+Here the learning rate of the \texttt{sgd\_env} is dynamically adapted with a learned
+Reinforcement Learning agent.
+
+The learning rate $\gamma \in [0.00001, 1]$ is adjusted in the log-space.
+We used a SAC~\cite{haarnoja-icml2018} agent from the library \texttt{stable-baselines3}~\cite{stable-baselines3}
+and trained it for $1000000$ steps.
+For training we used $n_{instances} = 1000$ and a policy architecture of two hidden layers
+with $64$ neurons each.
+
+
+\bibliography{references}
+\end{document}
