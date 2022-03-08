@@ -78,7 +78,8 @@ class ReduceLROnPlateauPolicy(Serializable, DeterministicPolicy, DACPolicy):
     eps: float = 1e-8
 
     def act(self, state):
-        self.scheduler.step(state["loss"].mean())
+        if state["validation_loss"] is not None:
+            self.scheduler.step(state["validation_loss"].mean())
         return self.optimizer.param_groups[0]["lr"]
 
     def reset(self, _):

@@ -17,7 +17,6 @@ from torchvision import datasets, transforms
 
 from dac4automlcomp.generator import Generator
 
-
 DATASETS = {
     "MNIST": {
         "transform": transforms.Compose(
