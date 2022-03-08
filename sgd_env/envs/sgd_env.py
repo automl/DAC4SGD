@@ -1,35 +1,55 @@
-from itertools import count, cycle
-from typing import Iterator, Optional, Tuple, Union, Dict
+from typing import Iterator, Optional, Tuple, Union
 
 import numpy as np
 import torch
 from gym import spaces
-from dac4automlcomp.dac_env import DACEnv, Instance, Generator
 
+from dac4automlcomp.dac_env import DACEnv
+from dac4automlcomp.generator import Generator
 from sgd_env.envs import utils
-from sgd_env.envs.generators import default_instance_generator
+from sgd_env.envs.generators import DefaultSGDGenerator, SGDInstance
 
 
-class SGDEnv(DACEnv):
+class SGDEnv(DACEnv[SGDInstance], instance_type=SGDInstance):
+    """
+       The SGD DAC Environment implements the problem of dynamically configuring the learning rate hyperparameter of
+       a neural network optimizer (more specifically, torch.optim.AdamW) for a supervised learning task.
+
+       Actions correspond to learning rate values in [0,+inf[
+       For observation space check `observation_space` method docstring.
+       For instance space check the `SGDInstance` class docstring
+       Reward:
+           negative loss on test_loader of the instance  if done and not crashed
+           crash_penalty of the instance                 if crashed (also always done=True)
+           0                                             otherwise
+
+        Note: This is the environment that will be used for evaluating your submission.
+        Feel free to adapt it (e.g., using reward shaping) for training your policy.
+    """
     def __init__(
         self,
-        generator: Generator = default_instance_generator,
-        instance_set: Dict = None,
+        generator: Generator[SGDInstance] = DefaultSGDGenerator(),
         n_instances: Union[int, float] = np.inf,
         device: str = "cpu",
     ):
-        super().__init__(generator=generator, instance_set=instance_set, n_instances=n_instances, device=device)
-        torch.backends.cudnn.benchmark = False
-        torch.backends.cudnn.deterministic = True
+        super().__init__(generator, n_instances)
+        self.device = device
+
         self.action_space = spaces.Box(low=0.0, high=np.inf, shape=(1,))
         self._observation_space = None
         self.train_iter: Iterator[Tuple[torch.Tensor, torch.Tensor]]
 
     @property
     def observation_space(self):
+        """Current observation space includes;
+            step: Current optimization step
+            loss: The mini batch training loss
+            validation_loss: Validation loss at the end of every epoch else None
+            crashed: True if weights, gradients, reward become NaN/inf else False
+        """
         if self._observation_space is None:
             raise ValueError(
-                "Observation space changes for every instance. "
+                "Observation space size changes for every instance. "
                 "It is set after every reset. "
                 "Use a provided wrapper or handle it manually. "
                 "If batch size is fixed for every instance, "
@@ -37,10 +57,12 @@ class SGDEnv(DACEnv):
             )
         return self._observation_space
 
-    def step(self, action: float):
-        done = self._step()
-        action = float(action)  # convert to float if we receive a tensor
-        utils.optimizer_action(self.optimizer, "lr", {"lr": action})
+    def step(self, lr: float):
+        """
+        Update the parameters of the neural network using the given learning rate lr,
+        in the direction specified by AdamW, and if not done (crashed/cutoff reached),
+        performs another forward/backward pass (update only in the next step)."""
+        utils.optimizer_action(self.optimizer, "lr", {"lr": float(lr)})
         default_rng_state = torch.get_rng_state()
         torch.set_rng_state(self.env_rng_state)
         train_args = [
@@ -57,6 +79,7 @@ class SGDEnv(DACEnv):
             self.train_iter = iter(self.train_loader)
             train_args[3] = self.train_iter
             loss = utils.train(*train_args)
+        self._step += 1
         self.env_rng_state.data = torch.get_rng_state()
         torch.set_rng_state(default_rng_state)
         crashed = (
@@ -65,40 +88,56 @@ class SGDEnv(DACEnv):
                 torch.nn.utils.parameters_to_vector(self.model.parameters())
             ).any()
         )
-        state = {"step": self.n_step, "loss": loss, "crashed": crashed}
-        done = done if not crashed else True
+        validation_loss = None
+        if self._step % len(self.train_loader) == 0:  # Calculate validation loss at the end of an epoch
+            validation_loss = utils.test(
+                self.model, self.loss_function, self.validation_loader, self.device
+            )
+        state = {
+            "step": self._step,
+            "loss": loss,
+            "validation_loss": validation_loss,
+            "crashed": crashed,
+        }
+        done = self._step >= self.cutoff if not crashed else True
         if crashed:
             reward = self.crash_penalty
         elif done:
-            reward = -utils.test(
-                self.model, self.loss_function, self.validation_loader, self.device
+            test_losses = utils.test(
+                self.model, self.loss_function, self.test_loader, self.device
             )
+            reward = -test_losses.sum() / len(self.test_loader.dataset)
         else:
             reward = 0.0
         return state, reward, done, {}
 
-    def reset(self, instance: Optional[Union[Instance, int]] = None):
-        seed = self._reset(instance)
+    def reset(self, instance: Optional[Union[SGDInstance, int]] = None):
+        """Initialize the neural network, data loaders, etc. for given/random next task. Also perform a single
+        forward/backward pass, not yet updating the neural network parameters."""
+        super().reset(instance)
+        self._step = 0
         default_rng_state = torch.get_rng_state()
-        if seed:
-            torch.manual_seed(seed)
-            torch.cuda.manual_seed(seed)
-            torch.cuda.manual_seed_all(seed)
+
+        assert isinstance(self.current_instance, SGDInstance)
         (
             self.dataset,
             self.model,
             optimizer_params,
             self.loss_function,
             self.batch_size,
-            (self.train_loader, self.validation_loader),
+            self.train_validation_ratio,
+            (self.train_loader, self.validation_loader, self.test_loader),
             self.cutoff,
             self.crash_penalty,
-        ) = self.instance
+        ) = self.current_instance
 
         self._observation_space = spaces.Dict(
             {
                 "step": spaces.Box(0, self.cutoff, (1,)),
                 "loss": spaces.Box(0, np.inf, (self.batch_size,)),
+                "validation_loss": spaces.Box(
+                    0, np.inf, (len(self.test_loader.dataset),)
+                ),
                 "crashed": spaces.Discrete(1),
             }
         )
@@ -115,4 +154,14 @@ class SGDEnv(DACEnv):
         loss = self.loss_function(output, target, reduction="none")
         self.env_rng_state: torch.Tensor = torch.get_rng_state()
         torch.set_rng_state(default_rng_state)
-        return {"step": 0, "loss": loss, "crashed": False}
+        return {
+            "step": 0,
+            "loss": loss,
+            "validation_loss": None,
+            "crashed": False,
+        }
+
+    def seed(self, seed=None):
+        torch.backends.cudnn.benchmark = False
+        torch.backends.cudnn.deterministic = True
+        return super().seed(seed)

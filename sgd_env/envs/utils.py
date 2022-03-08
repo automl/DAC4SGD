@@ -1,4 +1,3 @@
-import numpy as np
 import torch
 from gym import spaces
 
@@ -11,6 +10,11 @@ def optimizer_action(
 
 
 def train(model, optimizer, loss_function, loader, steps, device="cpu"):
+    """Optimize given `model` for `loss_function` using `optimizer` for `steps` steps.
+
+    Returns:
+        loss: Final mini batch training loss per data point
+    """
     model.train()
     for step in range(steps):
         (data, target) = next(loader)
@@ -24,12 +28,17 @@ def train(model, optimizer, loss_function, loader, steps, device="cpu"):
 
 
 def test(model, loss_function, loader, device="cpu"):
+    """Evaluate given `model` on `loss_function`.
+
+    Returns:
+        test_losses: Full batch validation loss per data point
+    """
     model.eval()
-    test_loss = 0
+    test_losses = []
     with torch.no_grad():
         for data, target in loader:
             data, target = data.to(device), target.to(device)
             output = model(data)
-            test_loss += loss_function(output, target, reduction="sum").item()
-    test_loss /= len(loader.dataset)
-    return test_loss
+            test_losses.append(loss_function(output, target, reduction="none"))
+    test_losses = torch.cat(test_losses)
+    return test_losses
