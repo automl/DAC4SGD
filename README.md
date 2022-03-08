@@ -26,7 +26,8 @@ python setup.py install --user
 ## Basic Usage
 
 ```python
-import numpy
+import gym
+import numpy as np
 import sgd_env
 
 env = gym.make("sgd-v0", n_instances=np.inf)
@@ -43,7 +44,8 @@ For more see https://github.com/automl-private/DAC4SGD/tree/main/examples
 
 ## Using Baseline Policies
 ```python
-import numpy
+import gym
+import numpy as np
 import sgd_env
 from sgd_env.policy.schedulers import CosineAnnealingLRPolicy
 
