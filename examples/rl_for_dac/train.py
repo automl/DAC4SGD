@@ -10,8 +10,6 @@ Instance Schedule: Round Robin
 
 
 """
-
-import os
 import argparse
 from pathlib import Path
 
@@ -22,17 +20,10 @@ from rich import print
 import numpy as np
 import torch as th
 import json
-from ConfigSpace.configuration_space import ConfigurationSpace
-from ConfigSpace.hyperparameters import UniformFloatHyperparameter
-from smac.facade.smac_ac_facade import SMAC4AC
-from smac.initial_design.random_configuration_design import RandomConfigurations
-from smac.scenario.scenario import Scenario
 
 import stable_baselines3
-from stable_baselines3.sac.policies import SACPolicy
 
 import sgd_env  # noqa
-from examples.utils import SchedulerPolicyAction, run_policy
 
 
 def get_parser():
@@ -63,7 +54,7 @@ class SGDEnvObservationWrapper(ObservationWrapper):
         return obs
 
 
-class SGDEnvActionWrapper(ActionWrapper):
+class SGDEnvActionWrapper(ActionWrapper):  # TODO move log conversion inside policy
     def action(self, action):
         action_log = th.tensor(action)
         # convert log action to normal action
