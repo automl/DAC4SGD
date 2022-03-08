@@ -46,11 +46,11 @@ SGDInstance = namedtuple(
         "model",  # Initialized torch.nn.Module model
         "optimizer_params",  # kwargs for optimizer initializing excluding parameters
         "loss",  # Callable loss function with torch.nn.functional API
-        "batch_size",
+        "batch_size",  # Step-wise gradient estimates are based on batch_size data points
         "train_validation_ratio",  # Train dataset size / validation dataset size
         "loaders",  # train loader, validation_loader, test_loader
         "cutoff",  # Number of optimization steps
-        "crash_penalty",  # Received reward when environment crashes
+        "crash_penalty",  # Received reward when target algorithm crashes (typical by divergence)
     ],
 )
 
