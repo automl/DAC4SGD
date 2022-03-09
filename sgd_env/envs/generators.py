@@ -70,7 +70,7 @@ class DefaultSGDGenerator(Generator[SGDInstance]):
         "batch_size_exp", 4, 8, log=True
     )
     validation_train_percent: InitVar[Hyperparameter] = UniformIntegerHyperparameter(
-        "validation_train_percent", 1, 20, log=True, default_value=10
+        "validation_train_percent", 5, 20, log=True, default_value=10
     )
     fraction_of_dataset: InitVar[Hyperparameter] = CategoricalHyperparameter(
         "fraction_of_dataset", [1, 0.5, 0.2, 0.1]
