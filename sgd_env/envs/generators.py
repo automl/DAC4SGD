@@ -255,7 +255,7 @@ class DefaultSGDGenerator(Generator[SGDInstance]):
                 / (0.01 + 0.00035 * batch_size + (0.0000002 * n_params) ** 2)
             ),
         )
-        cutoff = int(len(datasets[0]) * epoch_cutoff / batch_size)
+        cutoff = int(len(loaders[0]) * epoch_cutoff)
 
         crash_penalty = np.log(0.1) * cutoff
         train_validation_ratio = 1 - kwargs["validation_train_percent"] / 100
