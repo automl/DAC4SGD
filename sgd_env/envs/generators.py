@@ -53,6 +53,7 @@ SGDInstance = namedtuple(
         "loss",  # Callable loss function with torch.nn.functional API
         "batch_size",  # Step-wise gradient estimates are based on batch_size data points
         "train_validation_ratio",  # Train dataset size / validation dataset size
+        "fraction_of_dataset",  # Used fraction of full dataset
         "loaders",  # train loader, validation_loader, test_loader
         "cutoff",  # Number of optimization steps
         "crash_penalty",  # Received reward when target algorithm crashes (typical by divergence)
@@ -271,6 +272,7 @@ class DefaultSGDGenerator(Generator[SGDInstance]):
             loss,
             batch_size,
             train_validation_ratio,
+            kwargs["fraction_of_dataset"],
             loaders,
             cutoff,
             crash_penalty,
