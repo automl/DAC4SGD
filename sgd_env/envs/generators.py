@@ -6,10 +6,10 @@ import numpy as np
 import torch
 import torch.nn.functional as F
 from ConfigSpace import (
+    CategoricalHyperparameter,
     ConfigurationSpace,
     UniformFloatHyperparameter,
     UniformIntegerHyperparameter,
-    CategoricalHyperparameter,
 )
 from ConfigSpace.hyperparameters import Hyperparameter
 from torch import nn
@@ -17,6 +17,10 @@ from torch.utils.data.dataloader import DataLoader
 from torchvision import datasets, transforms
 
 from dac4automlcomp.generator import Generator
+from sgd_env.envs.utils import surpress_output
+
+datasets.CIFAR10.download = surpress_output(datasets.CIFAR10.download)
+
 
 DATASETS = {
     "MNIST": {
@@ -159,29 +163,20 @@ class DefaultSGDGenerator(Generator[SGDInstance]):
         """Samples random architecture with `rng` for given `input_shape` and `n_classes`."""
         modules = [Passthrough()]
         max_n_conv_layers = 3
-        n_conv_layers = rng.uniform(low=0, high=max_n_conv_layers)
+        n_conv_layers = rng.randint(low=0, high=max_n_conv_layers + 1)
         prev_conv = input_shape[0]
-        for layer_idx in range(1, int(n_conv_layers * 2 + 1), 2):
+        kernel_sizes = [3, 5, 7][: max(0, 3 - n_conv_layers + 1)]
+
+        for layer_idx, layer_exp in enumerate(range(1, int(n_conv_layers * 2 + 1), 2)):
             conv = int(
                 np.exp(
                     rng.uniform(
-                        low=np.log(2 ** layer_idx), high=np.log(2 ** (layer_idx + 2))
+                        low=np.log(2 ** layer_exp), high=np.log(2 ** (layer_exp + 2))
                     )
                 )
             )
-            kernel_sizes = (
-                [3] * int(max_n_conv_layers - n_conv_layers + 2)
-                + [5] * int(max_n_conv_layers - n_conv_layers)
-                + [7] * int(max_n_conv_layers - n_conv_layers)
-            )
             kernel_size = rng.choice(kernel_sizes)
-            strides = (
-                [1] * int(max_n_conv_layers - n_conv_layers + 2)
-                + [2] * int(max_n_conv_layers - n_conv_layers)
-                + [3] * int(max_n_conv_layers - n_conv_layers)
-            )
-            stride = rng.choice(strides)
-            modules.append(nn.Conv2d(prev_conv, conv, kernel_size, stride))
+            modules.append(nn.Conv2d(prev_conv, conv, kernel_size, 1))
             modules.append(nn.MaxPool2d(2))
             prev_conv = conv
 
@@ -194,7 +189,7 @@ class DefaultSGDGenerator(Generator[SGDInstance]):
         feature_extractor = nn.Sequential(*modules)
         linear_layers = [nn.Flatten()]
         max_n_mlp_layers = 2
-        n_mlp_layers = int(rng.uniform(low=0, high=max_n_mlp_layers))
+        n_mlp_layers = int(rng.randint(low=0, high=max_n_mlp_layers + 1))
         prev_l = int(
             torch.prod(
                 torch.tensor(feature_extractor(torch.zeros((1, *input_shape))).shape)

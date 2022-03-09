@@ -1,3 +1,7 @@
+import os
+import sys
+from functools import wraps
+
 import torch
 from gym import spaces
 
@@ -42,3 +46,17 @@ def test(model, loss_function, loader, device="cpu"):
             test_losses.append(loss_function(output, target, reduction="none"))
     test_losses = torch.cat(test_losses)
     return test_losses
+
+
+def surpress_output(func):
+    """Wrapper to surpress stdout of the `func`"""
+
+    @wraps(func)
+    def wrapped(*args, **kwargs):
+        f = open(os.devnull, "w")
+        sys.stdout = f
+        out = func(*args, **kwargs)
+        sys.stdout = sys.__stdout__
+        return out
+
+    return wrapped

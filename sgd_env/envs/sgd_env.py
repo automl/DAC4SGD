@@ -27,6 +27,8 @@ class SGDEnv(DACEnv[SGDInstance], instance_type=SGDInstance):
      Feel free to adapt it (e.g., using reward shaping) for training your policy.
     """
 
+    metadata = {"render_modes": ["human"]}
+
     def __init__(
         self,
         generator: Generator[SGDInstance] = DefaultSGDGenerator(),
@@ -76,18 +78,18 @@ class SGDEnv(DACEnv[SGDInstance], instance_type=SGDInstance):
         ]
         # prev_params = torch.nn.utils.parameters_to_vector(self.model.parameters())
         try:
-            loss = utils.train(*train_args)
+            self.loss = utils.train(*train_args)
         except StopIteration:
             self.train_iter = iter(self.train_loader)
             train_args[3] = self.train_iter
-            loss = utils.train(*train_args)
+            self.loss = utils.train(*train_args)
         # current_params = torch.nn.utils.parameters_to_vector(self.model.parameters())
         # diff = current_params - prev_params
         self._step += 1
         self.env_rng_state.data = torch.get_rng_state()
         torch.set_rng_state(default_rng_state)
         crashed = (
-            not torch.isfinite(loss).any()
+            not torch.isfinite(self.loss).any()
             or not torch.isfinite(
                 torch.nn.utils.parameters_to_vector(self.model.parameters())
             ).any()
@@ -99,9 +101,10 @@ class SGDEnv(DACEnv[SGDInstance], instance_type=SGDInstance):
             validation_loss = utils.test(
                 self.model, self.loss_function, self.validation_loader, self.device
             )
+            self.validation_loss_last_epoch = validation_loss
         state = {
             "step": self._step,
-            "loss": loss,
+            "loss": self.loss,
             "validation_loss": validation_loss,
             "crashed": crashed,
         }
@@ -157,12 +160,13 @@ class SGDEnv(DACEnv[SGDInstance], instance_type=SGDInstance):
         (data, target) = next(self.train_iter)
         data, target = data.to(self.device), target.to(self.device)
         output = self.model(data)
-        loss = self.loss_function(output, target, reduction="none")
+        self.loss = self.loss_function(output, target, reduction="none")
         self.env_rng_state: torch.Tensor = torch.get_rng_state()
         torch.set_rng_state(default_rng_state)
+        self.validation_loss_last_epoch = None
         return {
             "step": 0,
-            "loss": loss,
+            "loss": self.loss,
             "validation_loss": None,
             "crashed": False,
         }
@@ -171,3 +175,19 @@ class SGDEnv(DACEnv[SGDInstance], instance_type=SGDInstance):
         torch.backends.cudnn.benchmark = False
         torch.backends.cudnn.deterministic = True
         return super().seed(seed)
+
+    def render(self, mode="human"):
+        if mode == "human":
+            epoch = self._step // len(self.train_loader)
+            epoch_cutoff = self.cutoff // len(self.train_loader)
+            batch = self._step % len(self.train_loader)
+            print(
+                f"epoch {epoch}/{epoch_cutoff}, "
+                f"batch {batch}/{len(self.train_loader)}, "
+                f"batch_loss {self.loss.mean()}, "
+                f"val_loss_last_epoch {self.validation_loss_last_epoch}"
+            )
+            len(self.train_loader)
+            pass
+        else:
+            raise NotImplementedError
