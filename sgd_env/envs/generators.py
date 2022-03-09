@@ -108,6 +108,7 @@ class DefaultSGDGenerator(Generator[SGDInstance]):
         log=True,
         default_value=0.0001,
     )
+    dataset_path: str = "data"
 
     def __post_init__(self, *args):
         """Initialize configuration space using `InitVar` arguments of the class."""
@@ -222,7 +223,7 @@ class DefaultSGDGenerator(Generator[SGDInstance]):
         """Create train, validation, test loaders for `name` dataset."""
         transform = DATASETS[name]["transform"]
         train_dataset = getattr(datasets, name)(
-            "data", train=True, download=True, transform=transform
+            self.dataset_path, train=True, download=True, transform=transform
         )
         train_size = int(len(train_dataset) * kwargs["fraction_of_dataset"])
         classes = train_dataset.classes
@@ -230,7 +231,9 @@ class DefaultSGDGenerator(Generator[SGDInstance]):
             train_dataset, [train_size, len(train_dataset) - train_size]
         )
         train_dataset.classes = classes
-        test = getattr(datasets, name)("data", train=False, transform=transform)
+        test = getattr(datasets, name)(
+            self.dataset_path, train=False, transform=transform
+        )
         train_validation_ratio = 1 - kwargs["validation_train_percent"] / 100
         train_size = int(len(train_dataset) * train_validation_ratio)
         train, val = torch.utils.data.random_split(
