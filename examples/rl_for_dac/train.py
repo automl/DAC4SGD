@@ -93,7 +93,7 @@ class SGDEnvObservationWrapper(ObservationWrapper):
         return convert_observation(observation=observation)
 
 
-class SGDEnvActionWrapper(ActionWrapper):  # TODO move log conversion inside polic
+class SGDEnvActionWrapper(ActionWrapper):
     def action(self, action):
         return convert_action(action=action)
 
