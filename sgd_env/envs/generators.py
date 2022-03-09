@@ -9,6 +9,7 @@ from ConfigSpace import (
     ConfigurationSpace,
     UniformFloatHyperparameter,
     UniformIntegerHyperparameter,
+    CategoricalHyperparameter,
 )
 from ConfigSpace.hyperparameters import Hyperparameter
 from torch import nn
@@ -65,12 +66,14 @@ class Passthrough(nn.Module):
 
 @dataclass
 class DefaultSGDGenerator(Generator[SGDInstance]):
-    cutoff: InitVar[Hyperparameter] = UniformIntegerHyperparameter("cutoff", 300, 900)
     batch_size_exp: InitVar[Hyperparameter] = UniformIntegerHyperparameter(
-        "batch_size_exp", 2, 8, log=True
+        "batch_size_exp", 4, 8, log=True
     )
     validation_train_percent: InitVar[Hyperparameter] = UniformIntegerHyperparameter(
-        "validation_train_percent", 1, 20, log=True, default_value=10
+        "validation_train_percent", 5, 20, log=True, default_value=10
+    )
+    fraction_of_dataset: InitVar[Hyperparameter] = CategoricalHyperparameter(
+        "fraction_of_dataset", [1, 0.5, 0.2, 0.1]
     )
     eps: InitVar[Hyperparameter] = UniformFloatHyperparameter(
         "eps",
@@ -225,6 +228,12 @@ class DefaultSGDGenerator(Generator[SGDInstance]):
         train_dataset = getattr(datasets, name)(
             "data", train=True, download=True, transform=transform
         )
+        train_size = int(len(train_dataset) * kwargs["fraction_of_dataset"])
+        classes = train_dataset.classes
+        train_dataset, _ = torch.utils.data.random_split(
+            train_dataset, [train_size, len(train_dataset) - train_size]
+        )
+        train_dataset.classes = classes
         test = getattr(datasets, name)("data", train=False, transform=transform)
         train_validation_ratio = 1 - kwargs["validation_train_percent"] / 100
         train_size = int(len(train_dataset) * train_validation_ratio)
@@ -245,7 +254,19 @@ class DefaultSGDGenerator(Generator[SGDInstance]):
         )
         optimizer_params = self._sample_optimizer_params(rng, **kwargs)
         loss = F.nll_loss
-        cutoff = kwargs["cutoff"]
+        n_params = len(torch.nn.utils.parameters_to_vector(model.parameters()))
+        target_runtime = 60
+        epoch_cutoff = max(
+            1,
+            int(
+                batch_size
+                / len(datasets[0])
+                * (target_runtime - 0.5)
+                / (0.01 + 0.00035 * batch_size + (0.0000002 * n_params) ** 2)
+            ),
+        )
+        cutoff = int(len(loaders[0]) * epoch_cutoff)
+
         crash_penalty = np.log(0.1) * cutoff
         train_validation_ratio = 1 - kwargs["validation_train_percent"] / 100
         return SGDInstance(
