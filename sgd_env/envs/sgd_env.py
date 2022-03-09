@@ -188,7 +188,5 @@ class SGDEnv(DACEnv[SGDInstance], instance_type=SGDInstance):
                 f"batch_loss {self.loss.mean()}, "
                 f"val_loss_last_epoch {self.validation_loss_last_epoch}"
             )
-            len(self.train_loader)
-            pass
         else:
             raise NotImplementedError
