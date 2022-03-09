@@ -65,9 +65,8 @@ class Passthrough(nn.Module):
 
 @dataclass
 class DefaultSGDGenerator(Generator[SGDInstance]):
-    cutoff: InitVar[Hyperparameter] = UniformIntegerHyperparameter("cutoff", 300, 900)
     batch_size_exp: InitVar[Hyperparameter] = UniformIntegerHyperparameter(
-        "batch_size_exp", 2, 8, log=True
+        "batch_size_exp", 4, 8, log=True
     )
     validation_train_percent: InitVar[Hyperparameter] = UniformIntegerHyperparameter(
         "validation_train_percent", 1, 20, log=True, default_value=10
@@ -245,7 +244,19 @@ class DefaultSGDGenerator(Generator[SGDInstance]):
         )
         optimizer_params = self._sample_optimizer_params(rng, **kwargs)
         loss = F.nll_loss
-        cutoff = kwargs["cutoff"]
+        n_params = len(torch.nn.utils.parameters_to_vector(model.parameters()))
+        target_runtime = 60
+        epoch_cutoff = max(
+            1,
+            int(
+                batch_size
+                / len(datasets[0])
+                * (target_runtime - 0.5)
+                / (0.01 + 0.00035 * batch_size + (0.0000002 * n_params) ** 2)
+            ),
+        )
+        cutoff = int(len(datasets[0]) * epoch_cutoff / batch_size)
+
         crash_penalty = np.log(0.1) * cutoff
         train_validation_ratio = 1 - kwargs["validation_train_percent"] / 100
         return SGDInstance(
