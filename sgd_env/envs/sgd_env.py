@@ -101,7 +101,7 @@ class SGDEnv(DACEnv[SGDInstance], instance_type=SGDInstance):
             validation_loss = utils.test(
                 self.model, self.loss_function, self.validation_loader, self.device
             )
-            self.validation_loss_last_epoch = validation_loss
+            self.validation_loss_last_epoch = validation_loss.mean()
         state = {
             "step": self._step,
             "loss": self.loss,
