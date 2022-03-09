@@ -9,6 +9,7 @@ from ConfigSpace import (
     ConfigurationSpace,
     UniformFloatHyperparameter,
     UniformIntegerHyperparameter,
+    CategoricalHyperparameter,
 )
 from ConfigSpace.hyperparameters import Hyperparameter
 from torch import nn
@@ -70,6 +71,9 @@ class DefaultSGDGenerator(Generator[SGDInstance]):
     )
     validation_train_percent: InitVar[Hyperparameter] = UniformIntegerHyperparameter(
         "validation_train_percent", 1, 20, log=True, default_value=10
+    )
+    fraction_of_dataset: InitVar[Hyperparameter] = CategoricalHyperparameter(
+        "fraction_of_dataset", [1, 0.5, 0.2, 0.1]
     )
     eps: InitVar[Hyperparameter] = UniformFloatHyperparameter(
         "eps",
@@ -224,6 +228,12 @@ class DefaultSGDGenerator(Generator[SGDInstance]):
         train_dataset = getattr(datasets, name)(
             "data", train=True, download=True, transform=transform
         )
+        train_size = int(len(train_dataset) * kwargs["fraction_of_dataset"])
+        classes = train_dataset.classes
+        train_dataset, _ = torch.utils.data.random_split(
+            train_dataset, [train_size, len(train_dataset) - train_size]
+        )
+        train_dataset.classes = classes
         test = getattr(datasets, name)("data", train=False, transform=transform)
         train_validation_ratio = 1 - kwargs["validation_train_percent"] / 100
         train_size = int(len(train_dataset) * train_validation_ratio)
