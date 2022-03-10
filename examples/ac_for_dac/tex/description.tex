@@ -58,7 +58,7 @@
 % ]{biblatex}
 % \addbibresource{...}
 
-\title{Example DAC4AutoML Submission for AutoML 2022}
+\title{Example: A Classical Algorithm Configuration Approach to Dynamic Learning Rate Configuration}
 
 % The syntax for adding an author is
 %
@@ -69,7 +69,8 @@
 %
 % \author[1,2]{\nameemail{Anonymous}{anonymous@example.com}}
 
-\author[1]{\nameemail{Author 1}{email1@example.com}}
+\author[1]{\nameemail{Steven Adriaensen}{adriaens@cs.uni-freiburg.de}}
+\author[1]{\nameemail{G\"{o}ktu\u{g} Karaka\c{s}l{\i}}{karakasg@cs.uni-freiburg.de}}
 
 % the list might continue:
 % \author[2,3]{\nameemail{Author 2}{email2@example.com}}
@@ -84,7 +85,7 @@
 % Specify corresponding affiliations after authors, referring to counter used in
 % \author:
 
-\affil[1]{Institution 1}
+\affil[1]{University of Freiburg}
 
 % the list might continue:
 % \affil[2]{Institution 2}
@@ -103,7 +104,15 @@
 
 \maketitle
 
-Describe how to describe the solution here. Add a submodule for the automl.sty file?
+\noindent Here we solve DAC~\cite{biedenkapp-ecai20} by reduction to a classical (static) algorithm configuration problem. Specifically, we statically tune the parameters of hand-crafted dynamic learning rate schedulers using SMAC~\cite{hutter-lion11a}. We illustrate this approach for four different schedulers (e.g., see \texttt{schedulers.py}):
+\begin{description}
+\item[\texttt{ConstantLRPolicy}:] A scheduler using the same learning rate (configurable parameter) throughout the training process.
+\item[\texttt{CosineAnnealingLRPolicy}:] A cosine annealing scheduler \cite{loshchilov-iclr17a}. Starting from an initial learning rate (configurable parameter) reduces the learning rate to 0 following a re-scaled half cosine curve.
+\item[\texttt{SimpleReactivePolicy}:] A novel simple scheduler using a constant learning rate (configurable parameter) for the first 2$n$ steps (configurable parameter). After every $(2+i) n^{\textrm{th}}$ step ($i \in \mathbb{N}$), if the average mini-batch loss during the last $n$ steps was lower than that in the previous 2$n$ steps, it \emph{increases} the learning rate with a factor $a$ (configurable parameter). If the loss is higher, it \emph{decreases} the learning rate with a factor ${b}$ (configurable parameter). 
+\item[\texttt{ReduceLROnPlateauPolicy}:] A scheduler emulating the \href{https://pytorch.org/docs/stable/generated/torch.optim.lr_scheduler.ReduceLROnPlateau.html}{ReduceLROnPlateau} pytorch scheduler. It adjusts the learning rate per epoch, based on the validation loss (observed at the end of every epoch). In particular, it reduces the learning rate with a `factor' if the validation loss has stagnated for `patience' epochs.
+This scheduler has many parameters, but we only optimized the initial learning rate, `patience', `factor', and used the pytorch defaults for the others.
+\end{description}
+We provide the code to configure these schedulers using SMAC (see \texttt{train.py}) as well as the resulting optimized configurations (see \texttt{\url{tmp/saved_configs}}) on 1000 training instances (environment seed was 42) after 5000 target algorithm evaluations (smac seed was 42). Note that the training code requires installing \href{https://github.com/automl/SMAC3}{SMAC3} (e.g., calling \texttt{pip install -r requirements\_train.txt}).
 
 % On a scale of 1-5 (hand-crafted - learned from scratch): 2
 % On a scale of 1-3 (not reproducible - partially reproducible - fully repeatable)
@@ -120,4 +129,5 @@ Describe how to describe the solution here. Add a submodule for the automl.sty f
 % - Additional requirements for training?
 % - Commands to execute to produce the learned policy
 
+\bibliography{references}
 \end{document}
