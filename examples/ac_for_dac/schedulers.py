@@ -44,6 +44,9 @@ class Configurable:
 
 @dataclasses.dataclass
 class ConstantLRPolicy(Configurable, Serializable, DeterministicPolicy, DACPolicy):
+    """
+    A scheduler using the same learning rate throughout the training process.
+    """
     lr: float
 
     def act(self, _):
@@ -63,6 +66,9 @@ class ConstantLRPolicy(Configurable, Serializable, DeterministicPolicy, DACPolic
 
 @dataclasses.dataclass
 class CosineAnnealingLRPolicy(Configurable, Serializable, DeterministicPolicy, DACPolicy):
+    """
+    Starting from an initial learning rate reduces the learning rate to 0 following a re-scaled half cosine curve.
+    """
     lr: float
 
     def act(self, state):
@@ -82,6 +88,11 @@ class CosineAnnealingLRPolicy(Configurable, Serializable, DeterministicPolicy, D
 
 @dataclasses.dataclass
 class SimpleReactivePolicy(Configurable, Serializable, DeterministicPolicy, DACPolicy):
+    """
+    A novel simple scheduler using a constant learning rate for the first 2 epochs. After every (2+i)th epoch,
+    if the average mini-batch loss during the last epoch was lower than that in the last two epochs, it increases
+    the learning rate. If the loss is higher, it decreases the learning rate.
+    """
     lr: float
     a: float
     b: float
@@ -121,6 +132,11 @@ class SimpleReactivePolicy(Configurable, Serializable, DeterministicPolicy, DACP
 
 @dataclasses.dataclass
 class ReduceLROnPlateauPolicy(Configurable, Serializable, DeterministicPolicy, DACPolicy):
+    """
+    A scheduler emulating the ReduceLROnPlateau pytorch scheduler. It adjusts the learning rate per epoch,
+    based on the validation loss (observed at the end of every epoch). In particular, it reduces the learning rate
+    with a `factor' if the validation loss has `stagnated' for `patience' epochs.
+    """
     lr: float
     mode: str = "min"
     factor: float = 0.1
