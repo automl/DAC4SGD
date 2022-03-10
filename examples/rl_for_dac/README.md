@@ -6,7 +6,7 @@ To train the agent, call
 ```bash
 python train.py --n_steps 1000
 ```
-with 1000 steps (which should be a larger number in practise).
+with 1000 steps (which should be a larger number in practice).
 
 In `eval.py` a trained agent is loaded, converted into the required policy format
 and evaluated.

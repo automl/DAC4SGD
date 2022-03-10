@@ -47,7 +47,7 @@ class SGDEnv(DACEnv[SGDInstance], instance_type=SGDInstance):
         """Current observation space includes;
         step: Current optimization step
         loss: The mini batch training loss
-        validation_loss: Validation loss at the end of every epoch else None
+        validation_loss: Validation loss evaluated at the end of every epoch else None
         crashed: True if weights, gradients, reward become NaN/inf else False
         """
         if self._observation_space is None:

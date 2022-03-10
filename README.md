@@ -47,7 +47,7 @@ For more see https://github.com/automl-private/DAC4SGD/tree/main/examples
 import gym
 import numpy as np
 import sgd_env
-from sgd_env.policy.schedulers import CosineAnnealingLRPolicy
+from examples.ac_for_dac.schedulers import CosineAnnealingLRPolicy
 
 env = gym.make("sgd-v0", n_instances=np.inf)
 env.seed(123)

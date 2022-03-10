@@ -43,7 +43,10 @@ DATASETS = {
     },
 }
 
-
+"""
+Target Problem Instance definition: A supervised neural network training task.
+All properties of the task can be used inside the DAC policy (and is passed on reset) with exception of the test_loader.
+"""
 SGDInstance = namedtuple(
     "SGDInstance",
     [

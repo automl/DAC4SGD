@@ -4,11 +4,16 @@ from typing import List, Union
 
 import numpy as np
 import torch.optim
-
+from ConfigSpace.configuration_space import ConfigurationSpace
+from ConfigSpace.hyperparameters import UniformFloatHyperparameter
 from dac4automlcomp.policy import DACPolicy, DeterministicPolicy
 
 
 class Serializable:
+    """
+    Subclass providing a generic way to serialize a dataclass DACPolicy object as a json
+    """
+
     def save(self, path):
         file_path = path / f"{self.__class__.__name__}.json"
         with file_path.open(mode="w") as f:
@@ -21,8 +26,24 @@ class Serializable:
             return cls(**json.load(f))
 
 
+class Configurable:
+    """
+    Subclass providing a generic way to specify a DACPolicy's configuration space
+    """
+
+    @staticmethod
+    def config_space() -> ConfigurationSpace:
+        """Return a configuration space object"""
+        raise NotImplementedError
+
+    @classmethod
+    def from_config(cls, cfg):
+        """Return an instance of the class corresponding to the given configuration"""
+        return cls(**cfg)
+
+
 @dataclasses.dataclass
-class ConstantLRPolicy(Serializable, DeterministicPolicy, DACPolicy):
+class ConstantLRPolicy(Configurable, Serializable, DeterministicPolicy, DACPolicy):
     lr: float
 
     def act(self, _):
@@ -31,9 +52,17 @@ class ConstantLRPolicy(Serializable, DeterministicPolicy, DACPolicy):
     def reset(self, instance):
         pass
 
+    @staticmethod
+    def config_space():
+        cs = ConfigurationSpace()
+        cs.add_hyperparameter(
+            UniformFloatHyperparameter("lr", lower=0.000001, upper=10, log=True)
+        )
+        return cs
+
 
 @dataclasses.dataclass
-class CosineAnnealingLRPolicy(Serializable, DeterministicPolicy, DACPolicy):
+class CosineAnnealingLRPolicy(Configurable, Serializable, DeterministicPolicy, DACPolicy):
     lr: float
 
     def act(self, state):
@@ -42,9 +71,17 @@ class CosineAnnealingLRPolicy(Serializable, DeterministicPolicy, DACPolicy):
     def reset(self, instance):
         self.cutoff = instance.cutoff
 
+    @staticmethod
+    def config_space():
+        cs = ConfigurationSpace()
+        cs.add_hyperparameter(
+            UniformFloatHyperparameter("lr", lower=0.000001, upper=10, log=True)
+        )
+        return cs
+
 
 @dataclasses.dataclass
-class SimplePolicy(Serializable, DeterministicPolicy, DACPolicy):
+class SimpleReactivePolicy(Configurable, Serializable, DeterministicPolicy, DACPolicy):
     lr: float
     a: float
     b: float
@@ -63,6 +100,16 @@ class SimplePolicy(Serializable, DeterministicPolicy, DACPolicy):
         self.loss = 0.0
         self.prev_loss = None
         self.epoch_size = len(instance.loaders[0])
+
+    @staticmethod
+    def config_space():
+        cs = ConfigurationSpace()
+        cs.add_hyperparameters([
+            UniformFloatHyperparameter("lr", lower=0.000001, upper=10, log=True),
+            UniformFloatHyperparameter("a", lower=0.1, upper=1.0),
+            UniformFloatHyperparameter("b", lower=0.1, upper=1.0),
+        ])
+        return cs
 
 
 @dataclasses.dataclass
