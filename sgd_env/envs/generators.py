@@ -85,10 +85,10 @@ class DefaultSGDGenerator(Generator[SGDInstance]):
     )
     weight_decay: InitVar[Hyperparameter] = UniformFloatHyperparameter(
         "weight_decay",
-        0.0001,
-        1,
+        1e-6,
+        0.1,
         log=True,
-        default_value=1e-2,
+        default_value=1e-3,
     )
     inv_beta1: InitVar[Hyperparameter] = UniformFloatHyperparameter(
         "inv_beta1",
@@ -135,7 +135,7 @@ class DefaultSGDGenerator(Generator[SGDInstance]):
             parameter: (
                 kwargs[parameter]
                 if modify > 0.8 and rng.rand() > 0.5
-                else getattr(self, parameter).default_value
+                else 0.0 if parameter == "weight_decay" else getattr(self, parameter).default_value
             )
             for parameter in [
                 "weight_decay",
@@ -164,8 +164,13 @@ class DefaultSGDGenerator(Generator[SGDInstance]):
         n_conv_layers = rng.randint(low=0, high=max_n_conv_layers + 1)
         prev_conv = input_shape[0]
         kernel_sizes = [3, 5, 7][: max(0, 3 - n_conv_layers + 1)]
+        activation = rng.choice([nn.Identity, nn.ReLU, nn.PReLU, nn.ELU])
+        batch_norm_2d = rng.choice([nn.Identity, nn.BatchNorm2d])
+        bn_first = rng.choice([False, True])
 
         for layer_idx, layer_exp in enumerate(range(1, int(n_conv_layers * 2 + 1), 2)):
+            if layer_idx > 0:
+                modules.append(nn.MaxPool2d(2))
             conv = int(
                 np.exp(
                     rng.uniform(
@@ -175,17 +180,17 @@ class DefaultSGDGenerator(Generator[SGDInstance]):
             )
             kernel_size = rng.choice(kernel_sizes)
             modules.append(nn.Conv2d(prev_conv, conv, kernel_size, 1))
-            modules.append(nn.MaxPool2d(2))
             prev_conv = conv
-
-        activation = rng.choice([nn.Identity, nn.ReLU, nn.PReLU, nn.ELU])
-        batch_norm = rng.choice([nn.Identity, nn.BatchNorm2d])
-        if n_conv_layers:
-            modules.pop()
+            if bn_first:
+                modules.append(batch_norm_2d(prev_conv))
             modules.append(activation())
-            modules.append(batch_norm(prev_conv))
+            if not bn_first:
+                modules.append(batch_norm_2d(prev_conv))
+
         feature_extractor = nn.Sequential(*modules)
+
         linear_layers = [nn.Flatten()]
+        batch_norm_1d = rng.choice([nn.Identity, nn.BatchNorm1d])
         max_n_mlp_layers = 2
         n_mlp_layers = int(rng.randint(low=0, high=max_n_mlp_layers + 1))
         prev_l = int(
@@ -205,8 +210,12 @@ class DefaultSGDGenerator(Generator[SGDInstance]):
                 )
             )
             linear_layers.append(nn.Linear(prev_l, l))
-            linear_layers.append(nn.ReLU())
             prev_l = l
+            if bn_first:
+                linear_layers.append(batch_norm_1d(prev_l))
+            linear_layers.append(activation())
+            if not bn_first:
+                linear_layers.append(batch_norm_1d(prev_l))
 
         linear_layers.append(nn.Linear(prev_l, n_classes))
         linear_layers.append(nn.LogSoftmax(1))
