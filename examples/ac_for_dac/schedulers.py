@@ -124,9 +124,9 @@ class SimpleReactivePolicy(Configurable, Serializable, DeterministicPolicy, DACP
 
     @classmethod
     def from_config(cls, cfg):
-        cfg = cfg.get_dictionary()
-        cfg["a"] = 1 / cfg.pop("1/a")
-        cfg["b"] = 1 / cfg.pop("1/b")
+        cfg = dict(**cfg.get_dictionary())
+        cfg["a"] = 1.0 / cfg.pop("1/a")
+        cfg["b"] = 1.0 / cfg.pop("1/b")
         return cls(**cfg)
 
 
