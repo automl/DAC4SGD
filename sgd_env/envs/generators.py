@@ -64,14 +64,6 @@ SGDInstance = namedtuple(
 )
 
 
-class Passthrough(nn.Module):
-    def __init__(self, *args, **kwargs):
-        super().__init__()
-
-    def forward(self, x):
-        return x
-
-
 @dataclass
 class DefaultSGDGenerator(Generator[SGDInstance]):
     batch_size_exp: InitVar[Hyperparameter] = UniformIntegerHyperparameter(
@@ -166,7 +158,7 @@ class DefaultSGDGenerator(Generator[SGDInstance]):
         **kwargs
     ) -> nn.Module:
         """Samples random architecture with `rng` for given `input_shape` and `n_classes`."""
-        modules = [Passthrough()]
+        modules = [nn.Identity()]
         max_n_conv_layers = 3
         n_conv_layers = rng.randint(low=0, high=max_n_conv_layers + 1)
         prev_conv = input_shape[0]
@@ -185,8 +177,8 @@ class DefaultSGDGenerator(Generator[SGDInstance]):
             modules.append(nn.MaxPool2d(2))
             prev_conv = conv
 
-        activation = rng.choice([Passthrough, nn.ReLU, nn.PReLU, nn.ELU])
-        batch_norm = rng.choice([Passthrough, nn.BatchNorm2d])
+        activation = rng.choice([nn.Identity, nn.ReLU, nn.PReLU, nn.ELU])
+        batch_norm = rng.choice([nn.Identity, nn.BatchNorm2d])
         if n_conv_layers:
             modules.pop()
             modules.append(activation())
