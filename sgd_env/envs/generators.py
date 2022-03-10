@@ -1,6 +1,7 @@
 from collections import namedtuple
 from dataclasses import InitVar, dataclass
 from typing import Tuple
+import os
 
 import numpy as np
 import torch
@@ -64,14 +65,6 @@ SGDInstance = namedtuple(
 )
 
 
-class Passthrough(nn.Module):
-    def __init__(self, *args, **kwargs):
-        super().__init__()
-
-    def forward(self, x):
-        return x
-
-
 @dataclass
 class DefaultSGDGenerator(Generator[SGDInstance]):
     batch_size_exp: InitVar[Hyperparameter] = UniformIntegerHyperparameter(
@@ -111,7 +104,7 @@ class DefaultSGDGenerator(Generator[SGDInstance]):
         log=True,
         default_value=0.0001,
     )
-    dataset_path: str = "data"
+    dataset_path: str = os.path.join(os.path.dirname(os.path.abspath(__file__)), "data")
 
     def __post_init__(self, *args):
         """Initialize configuration space using `InitVar` arguments of the class."""
@@ -166,7 +159,7 @@ class DefaultSGDGenerator(Generator[SGDInstance]):
         **kwargs
     ) -> nn.Module:
         """Samples random architecture with `rng` for given `input_shape` and `n_classes`."""
-        modules = [Passthrough()]
+        modules = [nn.Identity()]
         max_n_conv_layers = 3
         n_conv_layers = rng.randint(low=0, high=max_n_conv_layers + 1)
         prev_conv = input_shape[0]
@@ -185,8 +178,8 @@ class DefaultSGDGenerator(Generator[SGDInstance]):
             modules.append(nn.MaxPool2d(2))
             prev_conv = conv
 
-        activation = rng.choice([Passthrough, nn.ReLU, nn.PReLU, nn.ELU])
-        batch_norm = rng.choice([Passthrough, nn.BatchNorm2d])
+        activation = rng.choice([nn.Identity, nn.ReLU, nn.PReLU, nn.ELU])
+        batch_norm = rng.choice([nn.Identity, nn.BatchNorm2d])
         if n_conv_layers:
             modules.pop()
             modules.append(activation())
@@ -269,7 +262,7 @@ class DefaultSGDGenerator(Generator[SGDInstance]):
         )
         cutoff = int(len(loaders[0]) * epoch_cutoff)
 
-        crash_penalty = np.log(0.1) * cutoff
+        crash_penalty = np.log(len(datasets[0].classes))
         train_validation_ratio = 1 - kwargs["validation_train_percent"] / 100
         return SGDInstance(
             dataset,

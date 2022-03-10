@@ -1,4 +1,5 @@
 from typing import Iterator, Optional, Tuple, Union
+import copy
 
 import numpy as np
 import torch
@@ -102,6 +103,10 @@ class SGDEnv(DACEnv[SGDInstance], instance_type=SGDInstance):
                 self.model, self.loss_function, self.validation_loader, self.device
             )
             self.validation_loss_last_epoch = validation_loss.mean()
+            if self.validation_loss_last_epoch <= self.min_validation_loss:
+                self.min_validation_loss = self.validation_loss_last_epoch
+                self.checkpoint = copy.deepcopy(self.model)
+
         state = {
             "step": self._step,
             "loss": self.loss,
@@ -109,11 +114,11 @@ class SGDEnv(DACEnv[SGDInstance], instance_type=SGDInstance):
             "crashed": crashed,
         }
         done = self._step >= self.cutoff if not crashed else True
-        if crashed:
+        if crashed or (done and self.checkpoint is None):
             reward = self.crash_penalty
         elif done:
             test_losses = utils.test(
-                self.model, self.loss_function, self.test_loader, self.device
+                self.checkpoint, self.loss_function, self.test_loader, self.device
             )
             reward = -test_losses.sum() / len(self.test_loader.dataset)
         else:
@@ -165,6 +170,8 @@ class SGDEnv(DACEnv[SGDInstance], instance_type=SGDInstance):
         self.env_rng_state: torch.Tensor = torch.get_rng_state()
         torch.set_rng_state(default_rng_state)
         self.validation_loss_last_epoch = None
+        self.checkpoint = None
+        self.min_validation_loss = self.crash_penalty
         return {
             "step": 0,
             "loss": self.loss,
