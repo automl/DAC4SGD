@@ -186,9 +186,9 @@ class SGDEnv(DACEnv[SGDInstance], instance_type=SGDInstance):
 
     def render(self, mode="human"):
         if mode == "human":
-            epoch = self._step // len(self.train_loader)
+            epoch = 1 + self._step // len(self.train_loader)
             epoch_cutoff = self.cutoff // len(self.train_loader)
-            batch = self._step % len(self.train_loader)
+            batch = 1 + self._step % len(self.train_loader)
             print(
                 f"epoch {epoch}/{epoch_cutoff}, "
                 f"batch {batch}/{len(self.train_loader)}, "

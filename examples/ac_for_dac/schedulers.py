@@ -5,7 +5,7 @@ from typing import List, Union
 import numpy as np
 import torch.optim
 from ConfigSpace.configuration_space import ConfigurationSpace
-from ConfigSpace.hyperparameters import UniformFloatHyperparameter
+from ConfigSpace.hyperparameters import UniformFloatHyperparameter, UniformIntegerHyperparameter
 from dac4automlcomp.policy import DACPolicy, DeterministicPolicy
 
 
@@ -88,9 +88,9 @@ class SimpleReactivePolicy(Configurable, Serializable, DeterministicPolicy, DACP
 
     def act(self, state):
         self.loss += state["loss"].sum()
-        if not (state["step"] + 1) % self.epoch_size:
+        if not (state["step"] + 1) % self.epoch_size:   # true at the end of every epoch
             if self.prev_loss is not None:
-                self.lr_t *= self.a if self.loss > self.prev_loss else 1 / self.b
+                self.lr_t *= self.a if self.loss < self.prev_loss else 1.0 / self.b
             self.prev_loss = self.loss
             self.loss = 0.0
         return self.lr_t
@@ -106,14 +106,21 @@ class SimpleReactivePolicy(Configurable, Serializable, DeterministicPolicy, DACP
         cs = ConfigurationSpace()
         cs.add_hyperparameters([
             UniformFloatHyperparameter("lr", lower=0.000001, upper=10, log=True),
-            UniformFloatHyperparameter("a", lower=0.1, upper=1.0),
-            UniformFloatHyperparameter("b", lower=0.1, upper=1.0),
+            UniformFloatHyperparameter("1/a", lower=0.1, upper=1.0),
+            UniformFloatHyperparameter("1/b", lower=0.1, upper=1.0),
         ])
         return cs
 
+    @classmethod
+    def from_config(cls, cfg):
+        cfg = cfg.get_dictionary()
+        cfg["a"] = 1 / cfg.pop("1/a")
+        cfg["b"] = 1 / cfg.pop("1/b")
+        return cls(**cfg)
+
 
 @dataclasses.dataclass
-class ReduceLROnPlateauPolicy(Serializable, DeterministicPolicy, DACPolicy):
+class ReduceLROnPlateauPolicy(Configurable, Serializable, DeterministicPolicy, DACPolicy):
     lr: float
     mode: str = "min"
     factor: float = 0.1
@@ -125,7 +132,7 @@ class ReduceLROnPlateauPolicy(Serializable, DeterministicPolicy, DACPolicy):
     eps: float = 1e-8
 
     def act(self, state):
-        if state["validation_loss"] is not None:
+        if state["validation_loss"] is not None:  # true at the end of every epoch
             self.scheduler.step(state["validation_loss"].mean())
         return self.optimizer.param_groups[0]["lr"]
 
@@ -141,3 +148,13 @@ class ReduceLROnPlateauPolicy(Serializable, DeterministicPolicy, DACPolicy):
             optimizer, **scheduler_params
         )
         return scheduler, optimizer
+
+    @staticmethod
+    def config_space():
+        cs = ConfigurationSpace()
+        cs.add_hyperparameters([
+            UniformFloatHyperparameter("lr", lower=0.000001, upper=10, log=True),
+            UniformFloatHyperparameter("factor", lower=0.1, upper=1.0),
+            UniformIntegerHyperparameter("patience", lower=1, upper=10),
+        ])
+        return cs

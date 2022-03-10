@@ -7,6 +7,8 @@ from smac.facade.smac_ac_facade import SMAC4AC
 from smac.initial_design.random_configuration_design import RandomConfigurations
 from smac.scenario.scenario import Scenario
 
+import sgd_env  # noqa
+
 from examples.ac_for_dac import schedulers
 
 

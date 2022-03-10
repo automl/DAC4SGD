@@ -12,8 +12,7 @@ setup(
     long_description=long_description,
     long_description_content_type="text/markdown",
     packages=["sgd_env",
-              "sgd_env.envs",
-              "sgd_env.policy"],
+              "sgd_env.envs"],
     install_requires=["gym", "ConfigSpace", "numpy", "torch", "torchvision"],
     classifiers=[
         "Programming Language :: Python :: 3",
