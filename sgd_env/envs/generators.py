@@ -1,6 +1,7 @@
 from collections import namedtuple
 from dataclasses import InitVar, dataclass
 from typing import Tuple
+import os
 
 import numpy as np
 import torch
@@ -103,7 +104,7 @@ class DefaultSGDGenerator(Generator[SGDInstance]):
         log=True,
         default_value=0.0001,
     )
-    dataset_path: str = "data"
+    dataset_path: str = os.path.join(os.path.dirname(os.path.abspath(__file__)), "data")
 
     def __post_init__(self, *args):
         """Initialize configuration space using `InitVar` arguments of the class."""
