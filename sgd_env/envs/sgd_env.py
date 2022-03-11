@@ -66,26 +66,23 @@ class SGDEnv(DACEnv[SGDInstance], instance_type=SGDInstance):
         Update the parameters of the neural network using the given learning rate lr,
         in the direction specified by AdamW, and if not done (crashed/cutoff reached),
         performs another forward/backward pass (update only in the next step)."""
-        utils.optimizer_action(self.optimizer, "lr", {"lr": float(lr)})
         default_rng_state = torch.get_rng_state()
         torch.set_rng_state(self.env_rng_state)
+        utils.optimizer_action(self.optimizer, "lr", {"lr": float(lr)})
+        self.optimizer.step()
+        self.optimizer.zero_grad()
         train_args = [
             self.model,
-            self.optimizer,
             self.loss_function,
             self.train_iter,
-            1,
             self.device,
         ]
-        # prev_params = torch.nn.utils.parameters_to_vector(self.model.parameters())
         try:
-            self.loss = utils.train(*train_args)
+            self.loss = utils.forward_backward(*train_args)
         except StopIteration:
             self.train_iter = iter(self.train_loader)
             train_args[3] = self.train_iter
-            self.loss = utils.train(*train_args)
-        # current_params = torch.nn.utils.parameters_to_vector(self.model.parameters())
-        # diff = current_params - prev_params
+            self.loss = utils.forward_backward(*train_args)
         self._step += 1
         self.env_rng_state.data = torch.get_rng_state()
         torch.set_rng_state(default_rng_state)
@@ -162,12 +159,15 @@ class SGDEnv(DACEnv[SGDInstance], instance_type=SGDInstance):
         self.optimizer: torch.optim.Optimizer = torch.optim.AdamW(
             **optimizer_params, params=self.model.parameters()
         )
-        self.model.eval()
-        (data, target) = next(self.train_iter)
-        data, target = data.to(self.device), target.to(self.device)
-        output = self.model(data)
-        self.loss = self.loss_function(output, target, reduction="none")
-        self.env_rng_state: torch.Tensor = torch.get_rng_state()
+
+        self.optimizer.zero_grad()
+        self.loss = utils.forward_backward(
+            self.model,
+            self.loss_function,
+            self.train_iter,
+            self.device,
+        )
+        self.env_rng_state: torch.Tensor = copy.deepcopy(torch.get_rng_state())
         torch.set_rng_state(default_rng_state)
         self.validation_loss_last_epoch = None
         self.checkpoint = None

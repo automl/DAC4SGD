@@ -135,7 +135,9 @@ class DefaultSGDGenerator(Generator[SGDInstance]):
             parameter: (
                 kwargs[parameter]
                 if modify > 0.8 and rng.rand() > 0.5
-                else 0.0 if parameter == "weight_decay" else getattr(self, parameter).default_value
+                else 0.0
+                if parameter == "weight_decay"
+                else getattr(self, parameter).default_value
             )
             for parameter in [
                 "weight_decay",
