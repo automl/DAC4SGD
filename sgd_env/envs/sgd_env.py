@@ -81,7 +81,7 @@ class SGDEnv(DACEnv[SGDInstance], instance_type=SGDInstance):
             self.loss = utils.forward_backward(*train_args)
         except StopIteration:
             self.train_iter = iter(self.train_loader)
-            train_args[3] = self.train_iter
+            train_args[2] = self.train_iter
             self.loss = utils.forward_backward(*train_args)
         self._step += 1
         self.env_rng_state.data = torch.get_rng_state()
