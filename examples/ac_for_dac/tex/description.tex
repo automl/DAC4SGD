@@ -113,20 +113,5 @@
 \end{description}
 We provide the code to configure these schedulers using SMAC (see \texttt{train.py}) as well as the resulting optimized configurations (see \texttt{\url{tmp/saved_configs}}) on 1000 training instances (environment seed was 42) after 5000 target algorithm evaluations (smac seed was 42). Note that the training code requires installing \href{https://github.com/automl/SMAC3}{SMAC3} (e.g., calling \texttt{pip install -r requirements\_train.txt}).
 
-% On a scale of 1-5 (hand-crafted - learned from scratch): 2
-% On a scale of 1-3 (not reproducible - partially reproducible - fully repeatable)
-
-% Approach:
-% - Solve DAC by reduction to a static AC problem.
-% - Tune parameters of hand-crafted heuristic policies using SMAC.
-
-% Limitations:
-% - only parametric, with a limited # parameters --> strongly relies on expert knowledge in defining these
-% - black box: sample efficiency
-
-% Reproducibility:
-% - Additional requirements for training?
-% - Commands to execute to produce the learned policy
-
 \bibliography{references}
 \end{document}
