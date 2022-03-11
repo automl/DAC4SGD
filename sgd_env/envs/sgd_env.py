@@ -115,12 +115,12 @@ class SGDEnv(DACEnv[SGDInstance], instance_type=SGDInstance):
         }
         done = self._step >= self.cutoff if not crashed else True
         if crashed or (done and self.checkpoint is None):
-            reward = self.crash_penalty
+            reward = -self.crash_penalty
         elif done:
             test_losses = utils.test(
                 self.checkpoint, self.loss_function, self.test_loader, self.device
             )
-            reward = -test_losses.sum() / len(self.test_loader.dataset)
+            reward = -test_losses.sum().item() / len(self.test_loader.dataset)
         else:
             reward = 0.0
         return state, reward, done, {}
