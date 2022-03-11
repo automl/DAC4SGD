@@ -48,8 +48,8 @@ def test(model, loss_function, loader, device="cpu"):
     return test_losses
 
 
-def surpress_output(func):
-    """Wrapper to surpress stdout of the `func`"""
+def supress_output(func):
+    """Wrapper to supress stdout of the `func`"""
 
     @wraps(func)
     def wrapped(*args, **kwargs):

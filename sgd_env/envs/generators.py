@@ -18,9 +18,9 @@ from torch.utils.data.dataloader import DataLoader
 from torchvision import datasets, transforms
 
 from dac4automlcomp.generator import Generator
-from sgd_env.envs.utils import surpress_output
+from sgd_env.envs.utils import supress_output
 
-datasets.CIFAR10.download = surpress_output(datasets.CIFAR10.download)
+datasets.CIFAR10.download = supress_output(datasets.CIFAR10.download)
 
 
 DATASETS = {
