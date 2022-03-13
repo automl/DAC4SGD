@@ -9,7 +9,6 @@ from ConfigSpace.hyperparameters import (
     UniformFloatHyperparameter,
     UniformIntegerHyperparameter,
 )
-
 from dac4automlcomp.policy import DACPolicy, DeterministicPolicy
 
 

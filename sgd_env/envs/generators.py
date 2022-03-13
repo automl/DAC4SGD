@@ -13,11 +13,11 @@ from ConfigSpace import (
     UniformIntegerHyperparameter,
 )
 from ConfigSpace.hyperparameters import Hyperparameter
+from dac4automlcomp.generator import Generator
 from torch import nn
 from torch.utils.data.dataloader import DataLoader
 from torchvision import datasets, transforms
 
-from dac4automlcomp.generator import Generator
 from sgd_env.envs.utils import supress_output
 
 datasets.CIFAR10.download = supress_output(datasets.CIFAR10.download)

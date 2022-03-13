@@ -4,10 +4,9 @@ from pathlib import Path
 from typing import Dict, Optional, Union
 
 import stable_baselines3
+from dac4automlcomp.policy import DACPolicy
 from stable_baselines3.common.base_class import BaseAlgorithm
 from train import convert_action, convert_observation
-
-from dac4automlcomp.policy import DACPolicy
 
 
 class SGDPolicy(DACPolicy):

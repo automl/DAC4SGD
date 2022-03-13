@@ -2,12 +2,12 @@ import argparse
 from pathlib import Path
 
 import gym
+from dac4automlcomp.policy import DeterministicPolicy
 from smac.facade.smac_ac_facade import SMAC4AC
 from smac.initial_design.random_configuration_design import RandomConfigurations
 from smac.scenario.scenario import Scenario
 
 import sgd_env  # noqa
-from dac4automlcomp.policy import DeterministicPolicy
 from examples.ac_for_dac import schedulers
 
 
