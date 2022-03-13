@@ -5,7 +5,11 @@ from typing import List, Union
 import numpy as np
 import torch.optim
 from ConfigSpace.configuration_space import ConfigurationSpace
-from ConfigSpace.hyperparameters import UniformFloatHyperparameter, UniformIntegerHyperparameter
+from ConfigSpace.hyperparameters import (
+    UniformFloatHyperparameter,
+    UniformIntegerHyperparameter,
+)
+
 from dac4automlcomp.policy import DACPolicy, DeterministicPolicy
 
 
@@ -47,6 +51,7 @@ class ConstantLRPolicy(Configurable, Serializable, DeterministicPolicy, DACPolic
     """
     A scheduler using the same learning rate throughout the training process.
     """
+
     lr: float
 
     def act(self, _):
@@ -65,10 +70,13 @@ class ConstantLRPolicy(Configurable, Serializable, DeterministicPolicy, DACPolic
 
 
 @dataclasses.dataclass
-class CosineAnnealingLRPolicy(Configurable, Serializable, DeterministicPolicy, DACPolicy):
+class CosineAnnealingLRPolicy(
+    Configurable, Serializable, DeterministicPolicy, DACPolicy
+):
     """
     Starting from an initial learning rate reduces the learning rate to 0 following a re-scaled half cosine curve.
     """
+
     lr: float
 
     def act(self, state):
@@ -93,13 +101,14 @@ class SimpleReactivePolicy(Configurable, Serializable, DeterministicPolicy, DACP
     if the average mini-batch loss during the last epoch was lower than that in the last two epochs, it increases
     the learning rate. If the loss is higher, it decreases the learning rate.
     """
+
     lr: float
     a: float
     b: float
 
     def act(self, state):
         self.loss += state["loss"].sum()
-        if not (state["step"] + 1) % self.epoch_size:   # true at the end of every epoch
+        if not (state["step"] + 1) % self.epoch_size:  # true at the end of every epoch
             if self.prev_loss is not None:
                 self.lr_t *= self.a if self.loss < self.prev_loss else 1.0 / self.b
             self.prev_loss = self.loss
@@ -115,11 +124,13 @@ class SimpleReactivePolicy(Configurable, Serializable, DeterministicPolicy, DACP
     @staticmethod
     def config_space():
         cs = ConfigurationSpace()
-        cs.add_hyperparameters([
-            UniformFloatHyperparameter("lr", lower=0.000001, upper=10, log=True),
-            UniformFloatHyperparameter("1/a", lower=0.1, upper=1.0),
-            UniformFloatHyperparameter("1/b", lower=0.1, upper=1.0),
-        ])
+        cs.add_hyperparameters(
+            [
+                UniformFloatHyperparameter("lr", lower=0.000001, upper=10, log=True),
+                UniformFloatHyperparameter("1/a", lower=0.1, upper=1.0),
+                UniformFloatHyperparameter("1/b", lower=0.1, upper=1.0),
+            ]
+        )
         return cs
 
     @classmethod
@@ -131,12 +142,15 @@ class SimpleReactivePolicy(Configurable, Serializable, DeterministicPolicy, DACP
 
 
 @dataclasses.dataclass
-class ReduceLROnPlateauPolicy(Configurable, Serializable, DeterministicPolicy, DACPolicy):
+class ReduceLROnPlateauPolicy(
+    Configurable, Serializable, DeterministicPolicy, DACPolicy
+):
     """
     A scheduler emulating the ReduceLROnPlateau pytorch scheduler. It adjusts the learning rate per epoch,
     based on the validation loss (observed at the end of every epoch). In particular, it reduces the learning rate
     with a `factor' if the validation loss has `stagnated' for `patience' epochs.
     """
+
     lr: float
     mode: str = "min"
     factor: float = 0.1
@@ -168,9 +182,11 @@ class ReduceLROnPlateauPolicy(Configurable, Serializable, DeterministicPolicy, D
     @staticmethod
     def config_space():
         cs = ConfigurationSpace()
-        cs.add_hyperparameters([
-            UniformFloatHyperparameter("lr", lower=0.000001, upper=10, log=True),
-            UniformFloatHyperparameter("factor", lower=0.1, upper=1.0),
-            UniformIntegerHyperparameter("patience", lower=1, upper=10),
-        ])
+        cs.add_hyperparameters(
+            [
+                UniformFloatHyperparameter("lr", lower=0.000001, upper=10, log=True),
+                UniformFloatHyperparameter("factor", lower=0.1, upper=1.0),
+                UniformIntegerHyperparameter("patience", lower=1, upper=10),
+            ]
+        )
         return cs

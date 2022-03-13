@@ -1,14 +1,13 @@
 import argparse
 import json
 from pathlib import Path
-from typing import Optional, Dict, Union
+from typing import Dict, Optional, Union
 
 import stable_baselines3
 from stable_baselines3.common.base_class import BaseAlgorithm
+from train import convert_action, convert_observation
 
 from dac4automlcomp.policy import DACPolicy
-
-from train import convert_observation, convert_action
 
 
 class SGDPolicy(DACPolicy):
@@ -19,7 +18,13 @@ class SGDPolicy(DACPolicy):
     Intended to work with original SGDEnv. This is why we need to convert observations
     and actions in self.act to the format required by the original env.
     """
-    def __init__(self, agent: BaseAlgorithm, args: Optional[argparse.Namespace] = None, deterministic: bool = False):
+
+    def __init__(
+        self,
+        agent: BaseAlgorithm,
+        args: Optional[argparse.Namespace] = None,
+        deterministic: bool = False,
+    ):
         self.agent = agent
         self.args = args
         self.deterministic = deterministic
@@ -44,7 +49,9 @@ class SGDPolicy(DACPolicy):
         """
         state = convert_observation(observation=state)
         # next_state will be None because we don't use an RNN
-        action, next_state = self.agent.predict(observation=state, deterministic=self.deterministic)
+        action, next_state = self.agent.predict(
+            observation=state, deterministic=self.deterministic
+        )
         action = convert_action(action=action)
         return action
 
@@ -66,7 +73,7 @@ class SGDPolicy(DACPolicy):
 
         # Load arguments
         args_fn = logdir / "args.json"
-        with open(args_fn, 'r') as file:
+        with open(args_fn, "r") as file:
             args = json.load(file)
         args = argparse.Namespace(**args)
 
@@ -74,10 +81,7 @@ class SGDPolicy(DACPolicy):
         model_fn = logdir / "model.zip"
         agent = load_agent(agent=args.agent, model_fn=model_fn)
 
-        sgd_policy = cls(
-            agent=agent,
-            args=args
-        )
+        sgd_policy = cls(agent=agent, args=args)
 
         return sgd_policy
 

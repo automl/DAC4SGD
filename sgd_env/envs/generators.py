@@ -1,7 +1,7 @@
+import os
 from collections import namedtuple
 from dataclasses import InitVar, dataclass
 from typing import Tuple
-import os
 
 import numpy as np
 import torch

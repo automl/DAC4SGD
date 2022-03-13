@@ -1,5 +1,5 @@
-from typing import Iterator, Optional, Tuple, Union
 import copy
+from typing import Iterator, Optional, Tuple, Union
 
 import numpy as np
 import torch

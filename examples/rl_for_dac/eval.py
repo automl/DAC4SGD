@@ -1,10 +1,10 @@
-import numpy as np
 import gym
+import numpy as np
+
 from examples.utils import run_policy
 from policy import SGDPolicy
 
-
-if __name__ == '__main__':
+if __name__ == "__main__":
     # Load model and env
     model_fn = "tmp/model.zip"
     sgd_policy = SGDPolicy.load(model_fn)
