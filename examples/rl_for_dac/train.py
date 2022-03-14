@@ -12,15 +12,14 @@ Instance Schedule: Round Robin
 """
 import argparse
 from pathlib import Path
-
-import gym
-from gym import ObservationWrapper, ActionWrapper
-from typing import List, Dict
 from rich import print
 import numpy as np
 import torch as th
 import json
+from typing import List, Dict
 
+import gym
+from gym import ObservationWrapper, ActionWrapper
 import stable_baselines3
 
 import sgd_env  # noqa
