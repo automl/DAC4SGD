@@ -69,7 +69,7 @@
 %
 % \author[1,2]{\nameemail{Anonymous}{anonymous@example.com}}
 
-\author[1]{\nameemail{Author 1}{email1@example.com}}
+\author[1,2]{\nameemail{Carolin Benjamins}{}}
 
 % the list might continue:
 % \author[2,3]{\nameemail{Author 2}{email2@example.com}}
@@ -84,7 +84,8 @@
 % Specify corresponding affiliations after authors, referring to counter used in
 % \author:
 
-\affil[1]{\url{https://www.AutoML.org}}
+\affil[1]{Leibniz University Hannover}
+\affil[2]{\url{https://www.AutoML.org}}
 
 % the list might continue:
 % \affil[2]{Institution 2}
@@ -103,8 +104,11 @@
 
 \maketitle
 
+\paragraph{Method}
 Here the learning rate of the \texttt{sgd\_env} is dynamically adapted with a learned
 Reinforcement Learning agent.
+The assumption is that the state and the reward are expressive enough to guide an RL agent
+to learn how to adapt the learning rate.
 
 The learning rate $\gamma \in [0.00001, 1]$ is adjusted in the log-space.
 We used a SAC~\cite{haarnoja-icml2018} agent from the library \texttt{stable-baselines3}~\cite{stable-baselines3}
@@ -112,7 +116,23 @@ and trained it for $1000000$ steps.
 For training we used $n_{instances} = 1000$ and a policy architecture of two hidden layers
 with $64$ neurons each.
 We switch the instance each reset in a round-robin manner.
-No hyperparameters have been tuned.
+
+\paragraph{Limitations}
+There are few possible limitations.
+First, no hyperparameters are tuned which means that the selected agent might perform better.
+Second, no information about instances is leveraged during training making the agent oblivious of the cMDP.
+For example, instance features could be included in the state or be used to build a curriculum.
+Third, the state is a simple concatenation of the observation dictionary content.
+The state features do not necessarily lie on the same scale, maybe they can be scaled to the unit interval or
+preprocessed and/or condensed in any other way.
+
+\paragraph{Reproducibility}
+We provide the code and the command to reproduce the model in \texttt{README.md}.
+The training took approximately $3.5$ hours on an Intel Core i9-9900K CPU with 16 cores.
+
+\paragraph{Hyperparameters}
+This method introduces the type of RL agent and its hyperparameters.
+The RL agent type was manually set, and the default hyperparameters are used.
 
 
 \bibliography{references}
