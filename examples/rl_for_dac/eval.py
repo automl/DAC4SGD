@@ -1,8 +1,22 @@
 import gym
 import numpy as np
 
-from examples.utils import run_policy
 from policy import SGDPolicy
+
+
+def run_policy(env, policy, instance=None):
+    obs = env.reset(instance=instance)
+    policy.reset(env.current_instance)
+    done = False
+    states = []
+    rewards = []
+    while not done:
+        action = policy.act(obs)
+        obs, reward, done, _ = env.step(action)
+        states.append(obs)
+        rewards.append(reward)
+    return states, rewards
+
 
 if __name__ == "__main__":
     # Load model and env
