@@ -94,7 +94,7 @@ class SGDEnv(DACEnv[SGDInstance], instance_type=SGDInstance):
         )
         validation_loss = None
         if (
-            self._step % len(self.train_loader) == 0
+            self._step % len(self.train_loader) == 1 and self._step != 1
         ):  # Calculate validation loss at the end of an epoch
             validation_loss = utils.test(
                 self.model, self.loss_function, self.validation_loader, self.device
@@ -110,7 +110,7 @@ class SGDEnv(DACEnv[SGDInstance], instance_type=SGDInstance):
             "validation_loss": validation_loss,
             "crashed": crashed,
         }
-        done = self._step >= self.cutoff if not crashed else True
+        done = self._step >= self.cutoff + 1 if not crashed else True
         if crashed or (done and self.checkpoint is None):
             reward = -self.crash_penalty
         elif done:
