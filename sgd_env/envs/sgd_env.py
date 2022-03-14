@@ -92,9 +92,12 @@ class SGDEnv(DACEnv[SGDInstance], instance_type=SGDInstance):
                 torch.nn.utils.parameters_to_vector(self.model.parameters())
             ).any()
         )
+
+        done = self._step >= self.cutoff if not crashed else True
+
         validation_loss = None
         if (
-            self._step % len(self.train_loader) == 0
+            self._step % len(self.train_loader) == 0 or done
         ):  # Calculate validation loss at the end of an epoch
             validation_loss = utils.test(
                 self.model, self.loss_function, self.validation_loader, self.device
@@ -110,14 +113,15 @@ class SGDEnv(DACEnv[SGDInstance], instance_type=SGDInstance):
             "validation_loss": validation_loss,
             "crashed": crashed,
         }
-        done = self._step >= self.cutoff if not crashed else True
-        if crashed or (done and self.checkpoint is None):
-            reward = -self.crash_penalty
-        elif done:
-            test_losses = utils.test(
-                self.checkpoint, self.loss_function, self.test_loader, self.device
-            )
-            reward = -test_losses.sum().item() / len(self.test_loader.dataset)
+
+        if done:
+            if self.checkpoint is None:
+                reward = -self.crash_penalty
+            else:
+                test_losses = utils.test(
+                    self.checkpoint, self.loss_function, self.test_loader, self.device
+                )
+                reward = -test_losses.sum().item() / len(self.test_loader.dataset)
         else:
             reward = 0.0
         return state, reward, done, {}
@@ -190,6 +194,7 @@ class SGDEnv(DACEnv[SGDInstance], instance_type=SGDInstance):
             epoch_cutoff = self.cutoff // len(self.train_loader)
             batch = 1 + self._step % len(self.train_loader)
             print(
+                f"prev_lr {self.optimizer.param_groups[0]['lr'] if self._step > 0 else None}, "
                 f"epoch {epoch}/{epoch_cutoff}, "
                 f"batch {batch}/{len(self.train_loader)}, "
                 f"batch_loss {self.loss.mean()}, "
