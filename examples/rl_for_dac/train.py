@@ -123,21 +123,22 @@ def make_sgd_env(args):
     env = gym.make("sgd-v0", n_instances=args.n_instances)
     env.seed(args.seed)
 
+    # set observation space
+    low = np.array([0, 0, 0])  # step, loss, crashed
+    high = np.array([np.inf, np.inf, 1])
+    env._observation_space = gym.spaces.Box(low=low, high=high, shape=(3,))
+
     # Wrap the observations (Dict to Vector)
     env = SGDEnvObservationWrapper(env=env)
 
     # Wrap actions (numpy to torch)
     env = SGDEnvActionWrapper(env=env)
 
-    # set observation space
-    low = np.array([0, 0, 0])  # step, loss, crashed
-    high = np.array([np.inf, np.inf, 1])
-    env.observation_space = gym.spaces.Box(low=low, high=high, shape=(3,))
-
     # set action space
     low = np.log(1e-5)
     high = np.log(1)
     env.action_space = gym.spaces.Box(low=low, high=high, shape=(1,))  # log space
+
     return env
 
 
