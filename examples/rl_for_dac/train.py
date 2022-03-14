@@ -10,6 +10,7 @@ Instance Schedule: Round Robin
 
 
 """
+import os
 import argparse
 from pathlib import Path
 from rich import print
@@ -17,12 +18,15 @@ import numpy as np
 import torch as th
 import json
 from typing import List, Dict
+import datetime
 
 import gym
 from gym import ObservationWrapper, ActionWrapper
 import stable_baselines3
 
 import sgd_env  # noqa
+
+from utils import CustomCheckpointCallback
 
 
 def get_parser():
@@ -53,6 +57,12 @@ def get_parser():
         type=str,
         default="tmp",
         help="Directory where to save trained models and logs.",
+    )
+    parser.add_argument(
+        "--save_freq",
+        type=int,
+        default=5000,
+        help="Save frequency of model (number of timesteps)."
     )
     return parser
 
@@ -148,7 +158,8 @@ def main(
     print(args)
 
     # Setup logging
-    logdir = Path(args.outdir)
+    run_id = datetime.datetime.now().strftime("%Y-%m-%d/%H-%M-%S")
+    logdir = Path(args.outdir) / run_id
     logdir.mkdir(parents=True, exist_ok=True)
     logger = stable_baselines3.common.logger.configure(
         str(logdir), ["stdout", "csv", "tensorboard"]
@@ -178,9 +189,13 @@ def main(
     agent = agent_cls(**agent_kwargs)
     agent.set_logger(logger)
 
+    # Checkpointing callback
+    chkp_cb = CustomCheckpointCallback(save_freq=args.save_freq, name_prefix="model", save_path=str(logdir), override=True)
+    callbacks = [chkp_cb]
+
     # Learn
     agent.learn(
-        total_timesteps=args.n_steps,
+        total_timesteps=args.n_steps, callback=callbacks
     )
 
     # Save model
