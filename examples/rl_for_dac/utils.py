@@ -4,12 +4,12 @@ from stable_baselines3.common.callbacks import CheckpointCallback
 
 class CustomCheckpointCallback(CheckpointCallback):
     def __init__(
-            self,
-            save_freq: int,
-            save_path: str,
-            name_prefix: str = "rl_model",
-            verbose: int = 0,
-            override: bool = False,
+        self,
+        save_freq: int,
+        save_path: str,
+        name_prefix: str = "rl_model",
+        verbose: int = 0,
+        override: bool = False,
     ):
         """
         Callback for saving a model every ``save_freq`` calls
@@ -28,7 +28,12 @@ class CustomCheckpointCallback(CheckpointCallback):
         :param override: bool. If false, model file will get a unique identifier (number
             of timesteps) and is not overriden.
         """
-        super().__init__(save_freq=save_freq, save_path=save_path, name_prefix=name_prefix, verbose=verbose)
+        super().__init__(
+            save_freq=save_freq,
+            save_path=save_path,
+            name_prefix=name_prefix,
+            verbose=verbose,
+        )
         self.override = override
 
     def _on_step(self) -> bool:

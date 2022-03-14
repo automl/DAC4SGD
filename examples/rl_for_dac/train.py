@@ -62,7 +62,7 @@ def get_parser():
         "--save_freq",
         type=int,
         default=5000,
-        help="Save frequency of model (number of timesteps)."
+        help="Save frequency of model (number of timesteps).",
     )
     return parser
 
@@ -111,7 +111,7 @@ def convert_action(action):
     """
     action_log = th.tensor(action)
     # convert log action to normal action
-    action = 10 ** action_log
+    action = 10**action_log
     return action
 
 
@@ -190,13 +190,16 @@ def main(
     agent.set_logger(logger)
 
     # Checkpointing callback
-    chkp_cb = CustomCheckpointCallback(save_freq=args.save_freq, name_prefix="model", save_path=str(logdir), override=True)
+    chkp_cb = CustomCheckpointCallback(
+        save_freq=args.save_freq,
+        name_prefix="model",
+        save_path=str(logdir),
+        override=True,
+    )
     callbacks = [chkp_cb]
 
     # Learn
-    agent.learn(
-        total_timesteps=args.n_steps, callback=callbacks
-    )
+    agent.learn(total_timesteps=args.n_steps, callback=callbacks)
 
     # Save model
     savepath = logdir / "model.zip"
