@@ -31,6 +31,21 @@ def train(model, optimizer, loss_function, loader, steps, device="cpu"):
     return loss
 
 
+def forward_backward(model, loss_function, loader, device="cpu"):
+    """Do a forward and a backward pass for given `model` for `loss_function`.
+
+    Returns:
+        loss: Mini batch training loss per data point
+    """
+    model.train()
+    (data, target) = next(loader)
+    data, target = data.to(device), target.to(device)
+    output = model(data)
+    loss = loss_function(output, target, reduction="none")
+    loss.mean().backward()
+    return loss
+
+
 def test(model, loss_function, loader, device="cpu"):
     """Evaluate given `model` on `loss_function`.
 

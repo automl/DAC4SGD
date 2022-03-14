@@ -5,7 +5,9 @@ from dac4automlcomp.policy import DACPolicy
 from examples.ac_for_dac import schedulers
 
 
-def load_solution(policy_cls=schedulers.ConstantLRPolicy, path=Path("tmp", "saved_configs")) -> DACPolicy:
+def load_solution(
+    policy_cls=schedulers.ConstantLRPolicy, path=Path("tmp", "saved_configs")
+) -> DACPolicy:
     """
     Load Solution.
 

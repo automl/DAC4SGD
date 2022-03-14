@@ -8,19 +8,14 @@ from smac.initial_design.random_configuration_design import RandomConfigurations
 from smac.scenario.scenario import Scenario
 
 import sgd_env  # noqa
-
 from examples.ac_for_dac import schedulers
 
 
 class SchedulerPolicyAction(argparse.Action):
-    names = [
-        cls.__name__ for cls in schedulers.Configurable.__subclasses__()
-    ]
+    names = [cls.__name__ for cls in schedulers.Configurable.__subclasses__()]
 
     def __call__(self, parser, namespace, values, option_string=None):
-        mapping = dict(
-            zip(self.names, schedulers.Configurable.__subclasses__())
-        )
+        mapping = dict(zip(self.names, schedulers.Configurable.__subclasses__()))
         setattr(namespace, self.dest, mapping[values])
 
 
@@ -36,11 +31,30 @@ def get_parser():
         choices=SchedulerPolicyAction.names,
         help="Scheduler class name",
     )
-    parser.add_argument("--n_instances", type=int, default=1000, help="Number of instances in training environment")
-    parser.add_argument("--env_seed", type=int, default=42, help="Random seed for the training environment")
-    parser.add_argument("--smac_seed", type=int, default=42, help="Random seed for SMAC")
-    parser.add_argument("--smac_budget", type=int, default=5000, help="Budget for SMAC (# TAE calls)")
-    parser.add_argument("--outdir", type=str, default="tmp", help="Directory where to save trained models and logs.")
+    parser.add_argument(
+        "--n_instances",
+        type=int,
+        default=1000,
+        help="Number of instances in training environment",
+    )
+    parser.add_argument(
+        "--env_seed",
+        type=int,
+        default=42,
+        help="Random seed for the training environment",
+    )
+    parser.add_argument(
+        "--smac_seed", type=int, default=42, help="Random seed for SMAC"
+    )
+    parser.add_argument(
+        "--smac_budget", type=int, default=5000, help="Budget for SMAC (# TAE calls)"
+    )
+    parser.add_argument(
+        "--outdir",
+        type=str,
+        default="tmp",
+        help="Directory where to save trained models and logs.",
+    )
     return parser
 
 
@@ -57,7 +71,9 @@ def evaluate_cost(cfg, seed, instance, **kwargs):
         action = policy.act(obs)
         obs, reward, done, _ = train_env.step(action)
         total_reward += reward
-    return -(train_env.current_instance.crash_penalty if obs["crashed"] else total_reward)
+    return -(
+        train_env.current_instance.crash_penalty if obs["crashed"] else total_reward
+    )
 
 
 if __name__ == "__main__":

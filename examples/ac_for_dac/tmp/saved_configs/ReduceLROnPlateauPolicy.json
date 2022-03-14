@@ -1,0 +1,1 @@
+{"lr": 0.0015590225333744513, "mode": "min", "factor": 0.4841129956389849, "patience": 1, "threshold": 0.0001, "threshold_mode": "rel", "cooldown": 0, "min_lr": 0, "eps": 1e-08}

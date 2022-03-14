@@ -1,7 +1,7 @@
+import os
 from collections import namedtuple
 from dataclasses import InitVar, dataclass
 from typing import Tuple
-import os
 
 import numpy as np
 import torch
@@ -13,11 +13,11 @@ from ConfigSpace import (
     UniformIntegerHyperparameter,
 )
 from ConfigSpace.hyperparameters import Hyperparameter
+from dac4automlcomp.generator import Generator
 from torch import nn
 from torch.utils.data.dataloader import DataLoader
 from torchvision import datasets, transforms
 
-from dac4automlcomp.generator import Generator
 from sgd_env.envs.utils import supress_output
 
 datasets.CIFAR10.download = supress_output(datasets.CIFAR10.download)
@@ -135,7 +135,9 @@ class DefaultSGDGenerator(Generator[SGDInstance]):
             parameter: (
                 kwargs[parameter]
                 if modify > 0.8 and rng.rand() > 0.5
-                else 0.0 if parameter == "weight_decay" else getattr(self, parameter).default_value
+                else 0.0
+                if parameter == "weight_decay"
+                else getattr(self, parameter).default_value
             )
             for parameter in [
                 "weight_decay",

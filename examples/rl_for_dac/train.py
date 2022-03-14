@@ -29,14 +29,31 @@ def get_parser():
     parser = argparse.ArgumentParser(
         description="Train a RL agent to dynamically adjust learning rate."
     )
-    parser.add_argument("--n_instances", type=int, default=1000, help="Number of instances")
+    parser.add_argument(
+        "--n_instances", type=int, default=1000, help="Number of instances"
+    )
     parser.add_argument("--seed", type=int, default=42, help="Random seed")
     parser.add_argument("--agent", type=str, default="SAC", help="RL agent")
-    parser.add_argument("--net_arch", type=int, nargs="+", default=[64, 64],
-                        help="Network architecture, List of layers with number of hidden units.")
-    parser.add_argument("--n_steps", type=int, default=1e3, help="Number of total timesteps that should be "
-                                                                 "taken in the environment for training.")
-    parser.add_argument("--outdir", type=str, default="tmp", help="Directory where to save trained models and logs.")
+    parser.add_argument(
+        "--net_arch",
+        type=int,
+        nargs="+",
+        default=[64, 64],
+        help="Network architecture, List of layers with number of hidden units.",
+    )
+    parser.add_argument(
+        "--n_steps",
+        type=int,
+        default=1e3,
+        help="Number of total timesteps that should be "
+        "taken in the environment for training.",
+    )
+    parser.add_argument(
+        "--outdir",
+        type=str,
+        default="tmp",
+        help="Directory where to save trained models and logs.",
+    )
     return parser
 
 
@@ -55,11 +72,15 @@ def convert_observation(observation: Dict) -> th.Tensor:
         Observation as required by our policy.
 
     """
-    obs = th.tensor([
-        observation["step"],
-        th.mean(observation["loss"]),  # loss comes at a batch, or use median or use interquartile mean
-        float(observation["crashed"]),  # convert bool to float
-    ])
+    obs = th.tensor(
+        [
+            observation["step"],
+            th.mean(
+                observation["loss"]
+            ),  # loss comes at a batch, or use median or use interquartile mean
+            float(observation["crashed"]),  # convert bool to float
+        ]
+    )
     return obs
 
 
@@ -88,6 +109,7 @@ class SGDEnvObservationWrapper(ObservationWrapper):
     """
     SGDEnv returns the observations as a dictionary. Return a vector.
     """
+
     def observation(self, observation: Dict) -> th.Tensor:
         return convert_observation(observation=observation)
 
@@ -119,19 +141,23 @@ def make_sgd_env(args):
     return env
 
 
-def main(args: argparse.Namespace, unknown_args: List[str], parser: argparse.ArgumentParser):
+def main(
+    args: argparse.Namespace, unknown_args: List[str], parser: argparse.ArgumentParser
+):
     print(args)
 
     # Setup logging
     logdir = Path(args.outdir)
     logdir.mkdir(parents=True, exist_ok=True)
-    logger = stable_baselines3.common.logger.configure(str(logdir), ["stdout", "csv", "tensorboard"])
+    logger = stable_baselines3.common.logger.configure(
+        str(logdir), ["stdout", "csv", "tensorboard"]
+    )
 
     # Save args
     kwargs = args._get_kwargs()
     kwargs_dict = {k: v for (k, v) in kwargs}
     args_fn = logdir / "args.json"
-    with open(args_fn, 'w') as file:
+    with open(args_fn, "w") as file:
         json.dump(kwargs_dict, file, indent="\t")
 
     # Make environment
@@ -144,10 +170,8 @@ def main(args: argparse.Namespace, unknown_args: List[str], parser: argparse.Arg
         "env": env,
         "seed": args.seed,
         "policy": "MlpPolicy",
-        "policy_kwargs": {
-            "net_arch": args.net_arch
-        },
-        "verbose": 1
+        "policy_kwargs": {"net_arch": args.net_arch},
+        "verbose": 1,
     }
     # Create agent
     agent = agent_cls(**agent_kwargs)
@@ -165,7 +189,7 @@ def main(args: argparse.Namespace, unknown_args: List[str], parser: argparse.Arg
     return savepath
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     parser = get_parser()
     args, unknown_args = parser.parse_known_args()
     model_savepath = main(args, unknown_args, parser)
