@@ -1,5 +1,7 @@
 # DAC4SGD
 
+DAC4SGD track of the DAC4AutoML competition at AutoML-Conf.
+
 ## Requirements
 
 ```
