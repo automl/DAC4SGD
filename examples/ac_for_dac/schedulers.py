@@ -18,13 +18,13 @@ class Serializable:
     """
 
     def save(self, path):
-        file_path = path / f"{self.__class__.__name__}.json"
+        file_path = path.resolve() / f"{self.__class__.__name__}.json"
         with file_path.open(mode="w") as f:
             json.dump(dataclasses.asdict(self), f)
 
     @classmethod
     def load(cls, path):
-        file_path = path / f"{cls.__name__}.json"
+        file_path = path.resolve() / f"{cls.__name__}.json"
         with file_path.open(mode="r") as f:
             return cls(**json.load(f))
 
