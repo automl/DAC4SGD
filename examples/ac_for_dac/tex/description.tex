@@ -104,10 +104,10 @@
 
 \maketitle
 
-\noindent Here we solve DAC~\cite{biedenkapp-ecai20} by reduction to a classical (static) algorithm configuration problem. Specifically, we statically tune the parameters of hand-crafted dynamic learning rate schedulers using SMAC~\cite{hutter-lion11a}. We illustrate this approach for four different schedulers (e.g., see \texttt{schedulers.py}):
+\noindent Here we solve DAC~\citep{biedenkapp-ecai20} by reduction to a classical (static) algorithm configuration problem. Specifically, we statically tune the parameters of hand-crafted dynamic learning rate schedulers using SMAC~\citep{hutter-lion11a}. We illustrate this approach for four different schedulers (e.g., see \texttt{schedulers.py}):
 \begin{description}
 \item[\texttt{ConstantLRPolicy}:] A scheduler using the same learning rate (configurable parameter) throughout the training process.
-\item[\texttt{CosineAnnealingLRPolicy}:] A cosine annealing scheduler \cite{loshchilov-iclr17a}. Starting from an initial learning rate (configurable parameter) reduces the learning rate to 0 following a re-scaled half cosine curve.
+\item[\texttt{CosineAnnealingLRPolicy}:] A cosine annealing scheduler \citep{loshchilov-iclr17a}. Starting from an initial learning rate (configurable parameter) reduces the learning rate to 0 following a re-scaled half cosine curve.
 \item[\texttt{SimpleReactivePolicy}:] A novel simple scheduler using a constant learning rate (configurable parameter) for the first 2 epochs. After every $(2+i)^{\textrm{th}}$ epoch ($i \in \mathbb{N}$), if the average mini-batch loss during the last epoch was lower than that in the previous 2 epochs, it \emph{increases} the learning rate with a factor $a$ (configurable parameter). If the loss is higher, it \emph{decreases} the learning rate with a factor ${b}$ (configurable parameter). 
 \item[\texttt{ReduceLROnPlateauPolicy}:] A scheduler emulating the \href{https://pytorch.org/docs/stable/generated/torch.optim.lr_scheduler.ReduceLROnPlateau.html}{ReduceLROnPlateau} pytorch scheduler. It adjusts the learning rate per epoch, based on the validation loss (observed at the end of every epoch). In particular, it reduces the learning rate with a `factor' if the validation loss has stagnated for `patience' epochs. This scheduler has many parameters, but we only optimized the initial learning rate, `patience', `factor', and used the pytorch defaults for the others.
 \end{description}
