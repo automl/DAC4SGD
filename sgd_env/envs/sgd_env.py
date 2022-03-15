@@ -13,16 +13,18 @@ from sgd_env.envs.generators import DefaultSGDGenerator, SGDInstance
 
 class SGDEnv(DACEnv[SGDInstance], instance_type=SGDInstance):
     """
-    The SGD DAC Environment implements the problem of dynamically configuring the learning rate hyperparameter of
-    a neural network optimizer (more specifically, torch.optim.AdamW) for a supervised learning task.
+    The SGD DAC Environment implements the problem of dynamically configuring the learning rate hyperparameter of a
+    neural network optimizer (more specifically, torch.optim.AdamW) for a supervised learning task. While training,
+    the model is evaluated after every epoch and a checkpoint of the model with minimal validation loss is retained.
 
     Actions correspond to learning rate values in [0,+inf[
     For observation space check `observation_space` method docstring.
     For instance space check the `SGDInstance` class docstring
     Reward:
-        negative loss on test_loader of the instance  if done and not crashed
-        crash_penalty of the instance                 if crashed (also always done=True)
-        0                                             otherwise
+        negative loss of checkpoint on test_loader of the instance  if done and a valid checkpoint is available
+        crash_penalty of the instance                               if done and no checkpoint is available
+                                                                    (~ crash / divergence in first epoch)
+        0                                                           otherwise
 
      Note: This is the environment that will be used for evaluating your submission.
      Feel free to adapt it (e.g., using reward shaping) for training your policy.
