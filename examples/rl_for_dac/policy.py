@@ -6,7 +6,7 @@ from typing import Dict, Optional, Union
 import stable_baselines3
 from dac4automlcomp.policy import DACPolicy
 from stable_baselines3.common.base_class import BaseAlgorithm
-from .utils import convert_observation, convert_action
+from utils import convert_observation, convert_action
 
 
 class SGDPolicy(DACPolicy):
