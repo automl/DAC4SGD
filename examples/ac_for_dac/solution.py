@@ -2,11 +2,11 @@ from pathlib import Path
 
 from dac4automlcomp.policy import DACPolicy
 
-from examples.ac_for_dac import schedulers
+import schedulers
 
 
 def load_solution(
-    policy_cls=schedulers.ConstantLRPolicy, path=Path("tmp", "saved_configs")
+    policy_cls=schedulers.ConstantLRPolicy, path=Path("")
 ) -> DACPolicy:
     """
     Load Solution.
@@ -23,4 +23,5 @@ def load_solution(
     -------
     DACPolicy
     """
+    path /= Path("tmp", "saved_configs")
     return policy_cls.load(path)

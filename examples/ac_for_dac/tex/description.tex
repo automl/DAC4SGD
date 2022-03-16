@@ -104,7 +104,7 @@
 
 \maketitle
 
-\noindent Here we solve DAC~\citep{biedenkapp-ecai20} by reduction to a classical (static) algorithm configuration problem. Specifically, we statically tune the parameters of hand-crafted dynamic learning rate schedulers using SMAC~\citep{hutter-lion11a}. We illustrate this approach for four different schedulers (e.g., see \texttt{schedulers.py}):
+\paragraph{Method} Here we solve DAC~\citep{biedenkapp-ecai20} by reduction to a classical (static) algorithm configuration problem. Specifically, we statically tune the parameters of hand-crafted dynamic learning rate schedulers using SMAC~\citep{hutter-lion11a}. We illustrate this approach for four different schedulers (e.g., see \texttt{schedulers.py}):
 \begin{description}
 \item[\texttt{ConstantLRPolicy}:] A scheduler using the same learning rate (configurable parameter) throughout the training process.
 \item[\texttt{CosineAnnealingLRPolicy}:] A cosine annealing scheduler \citep{loshchilov-iclr17a}. Starting from an initial learning rate (configurable parameter) reduces the learning rate to 0 following a re-scaled half cosine curve.
@@ -112,6 +112,17 @@
 \item[\texttt{ReduceLROnPlateauPolicy}:] A scheduler emulating the \href{https://pytorch.org/docs/stable/generated/torch.optim.lr_scheduler.ReduceLROnPlateau.html}{ReduceLROnPlateau} pytorch scheduler. It adjusts the learning rate per epoch, based on the validation loss (observed at the end of every epoch). In particular, it reduces the learning rate with a `factor' if the validation loss has stagnated for `patience' epochs. This scheduler has many parameters, but we only optimized the initial learning rate, `patience', `factor', and used the pytorch defaults for the others.
 \end{description}
 We provide the code to configure these schedulers using SMAC (see \texttt{train.py}) as well as the resulting optimized configurations (see \texttt{\url{tmp/saved_configs}}) on 1000 training instances (environment seed was 42) after 5000 target algorithm evaluations (smac seed was 42). Note that the training code requires installing \href{https://github.com/automl/SMAC3}{SMAC3} (e.g., calling \texttt{pip install -r requirements\_train.txt}).
+
+\paragraph{Limitations}
+A limitation is that this approach is restricted to searching a space of parametric DAC policies. Furthermore, contempary configurators (including SMAC) do not scale to very high dimensional configuration spaces (e.g., >> 100).
+As a consequence, it is far from fully data-driven, but still strongly relies on domain expert knowledge in the design of the parametric dynamic learning rate schedulers.
+Finally, SMAC is a black box method abstracting the inherently sequential nature of the DAC problem that could otherwise be exploited to solved it faster.
+
+\paragraph{Reproducibility}
+We provide instructions on how to reproduce our approach for all four schedulers in \texttt{README.md}.
+Each SMAC run took 2-3 days on a single core of an Intel Xeon Gold 6242 CPU.
+
+\paragraph{Hyperparameters}
 
 \bibliography{references}
 \end{document}
