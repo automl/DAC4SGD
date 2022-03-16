@@ -10,7 +10,6 @@ Instance Schedule: Round Robin
 
 
 """
-import os
 import argparse
 from pathlib import Path
 from rich import print
@@ -65,54 +64,6 @@ def get_parser():
         help="Save frequency of model (number of timesteps).",
     )
     return parser
-
-
-def convert_observation(observation: Dict) -> th.Tensor:
-    """
-    Convert SGDEnv observations to the required policy input format.
-
-    Parameters
-    ----------
-    observation: Dict
-        Observations coming from SGDEnv
-
-    Returns
-    -------
-    th.Tensor
-        Observation as required by our policy.
-
-    """
-    obs = th.tensor(
-        [
-            observation["step"],
-            th.mean(
-                observation["loss"]
-            ),  # loss comes at a batch, or use median or use interquartile mean
-            float(observation["crashed"]),  # convert bool to float
-        ]
-    )
-    return obs
-
-
-def convert_action(action):
-    """
-    Convert action from policy (learning rate in log-space) to normal space to pass
-    to SGDEnv.
-
-    Parameters
-    ----------
-    action
-        Log learning rate
-
-    Returns
-    -------
-    Learning rate
-
-    """
-    action_log = th.tensor(action)
-    # convert log action to normal action
-    action = 10**action_log
-    return action
 
 
 class SGDEnvObservationWrapper(ObservationWrapper):
