@@ -1,7 +1,7 @@
 import gym
 import numpy as np
 
-from policy import SGDPolicy
+from .policy import SGDPolicy
 
 
 def run_policy(env, policy, instance=None):

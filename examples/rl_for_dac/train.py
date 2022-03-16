@@ -26,7 +26,7 @@ import stable_baselines3
 
 import sgd_env  # noqa
 
-from utils import CustomCheckpointCallback
+from .utils import CustomCheckpointCallback, convert_observation, convert_action
 
 
 def get_parser():
