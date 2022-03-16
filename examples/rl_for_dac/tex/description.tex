@@ -111,7 +111,7 @@ The assumption is that the state and the reward are expressive enough to guide a
 to learn how to adapt the learning rate.
 
 The learning rate $\gamma \in [0.00001, 1]$ is adjusted in the log-space.
-We used a SAC~\cite{haarnoja-icml2018} agent from the library \texttt{stable-baselines3}~\cite{stable-baselines3}
+We used a A2C~\citep{mnih-icml16} agent from the library \texttt{stable-baselines3}~\citep{stable-baselines3}
 and trained it for $1000000$ steps.
 For training we used $n_{instances} = 1000$ and a policy architecture of two hidden layers
 with $64$ neurons each.
