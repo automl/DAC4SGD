@@ -1,11 +1,12 @@
 {
 	"n_instances": 1000,
-	"seed": 42,
-	"agent": "SAC",
+	"seed": 54321,
+	"agent": "A2C",
 	"net_arch": [
 		64,
 		64
 	],
-	"n_steps": 1000.0,
-	"outdir": "tmp"
+	"n_steps": 1000000,
+	"outdir": "tmp",
+	"save_freq": 5000
 }

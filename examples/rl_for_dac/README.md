@@ -14,5 +14,5 @@ and evaluated.
 ## Reproduce Model
 In order to reproduce the model run 
 ```bash
-python train.py --n_steps 1000000 --seed 54321
+python train.py --n_steps 1000000 --seed 54321 --agent A2C
 ```
