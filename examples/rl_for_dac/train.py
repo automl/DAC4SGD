@@ -96,8 +96,8 @@ def make_sgd_env(args):
     env = SGDEnvActionWrapper(env=env)
 
     # set action space
-    low = np.log(1e-5)
-    high = np.log(1)
+    low = np.log10(1e-5)
+    high = np.log10(1)
     env.action_space = gym.spaces.Box(low=low, high=high, shape=(1,))  # log space
 
     return env
