@@ -228,6 +228,7 @@ class DefaultSGDGenerator(Generator[SGDInstance]):
         self, rng: np.random.RandomState, name: str, **kwargs
     ) -> Tuple[DataLoader, DataLoader, DataLoader]:
         """Create train, validation, test loaders for `name` dataset."""
+        batch_size = 2 ** kwargs["batch_size_exp"]
         transform = DATASETS[name]["transform"]
         train_dataset = getattr(datasets, name)(
             self.dataset_path, train=True, download=True, transform=transform
@@ -243,10 +244,11 @@ class DefaultSGDGenerator(Generator[SGDInstance]):
         )
         train_validation_ratio = 1 - kwargs["validation_train_percent"] / 100
         train_size = int(len(train_dataset) * train_validation_ratio)
+        train_size = train_size - train_size % batch_size
         train, val = torch.utils.data.random_split(
             train_dataset, [train_size, len(train_dataset) - train_size]
         )
-        train_loader = DataLoader(train, batch_size=2 ** kwargs["batch_size_exp"])
+        train_loader = DataLoader(train, batch_size=batch_size, drop_last=True)
         val_loader = DataLoader(val, batch_size=64)
         test_loader = DataLoader(test, batch_size=64)
         return (train_dataset, test), (train_loader, val_loader, test_loader)
