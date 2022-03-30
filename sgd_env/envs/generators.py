@@ -56,7 +56,7 @@ SGDInstance = namedtuple(
         "optimizer_params",  # kwargs for optimizer initializing excluding parameters
         "loss",  # Callable loss function with torch.nn.functional API
         "batch_size",  # Step-wise gradient estimates are based on batch_size data points
-        "train_validation_ratio",  # Train dataset size / validation dataset size
+        "train_ratio",  # Train dataset size / full dataset size
         "fraction_of_dataset",  # Used fraction of full dataset
         "loaders",  # train loader, validation_loader, test_loader
         "cutoff",  # Number of optimization steps
@@ -70,8 +70,8 @@ class DefaultSGDGenerator(Generator[SGDInstance]):
     batch_size_exp: InitVar[Hyperparameter] = UniformIntegerHyperparameter(
         "batch_size_exp", 4, 8, log=True
     )
-    validation_train_percent: InitVar[Hyperparameter] = UniformIntegerHyperparameter(
-        "validation_train_percent", 5, 20, log=True, default_value=10
+    validation_percent: InitVar[Hyperparameter] = UniformIntegerHyperparameter(
+        "validation_percent", 5, 20, log=True, default_value=10
     )
     fraction_of_dataset: InitVar[Hyperparameter] = CategoricalHyperparameter(
         "fraction_of_dataset", [1, 0.5, 0.2, 0.1]
@@ -242,8 +242,8 @@ class DefaultSGDGenerator(Generator[SGDInstance]):
         test = getattr(datasets, name)(
             self.dataset_path, train=False, transform=transform
         )
-        train_validation_ratio = 1 - kwargs["validation_train_percent"] / 100
-        train_size = int(len(train_dataset) * train_validation_ratio)
+        train_ratio = 1 - kwargs["validation_percent"] / 100
+        train_size = int(len(train_dataset) * train_ratio)
         train_size = train_size - train_size % batch_size
         train, val = torch.utils.data.random_split(
             train_dataset, [train_size, len(train_dataset) - train_size]
@@ -276,14 +276,14 @@ class DefaultSGDGenerator(Generator[SGDInstance]):
         cutoff = int(len(loaders[0]) * epoch_cutoff)
 
         crash_penalty = np.log(len(datasets[0].classes))
-        train_validation_ratio = 1 - kwargs["validation_train_percent"] / 100
+        train_ratio = 1 - kwargs["validation_percent"] / 100
         return SGDInstance(
             dataset,
             model,
             optimizer_params,
             loss,
             batch_size,
-            train_validation_ratio,
+            train_ratio,
             kwargs["fraction_of_dataset"],
             loaders,
             cutoff,

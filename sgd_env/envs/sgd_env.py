@@ -142,7 +142,7 @@ class SGDEnv(DACEnv[SGDInstance], instance_type=SGDInstance):
             optimizer_params,
             self.loss_function,
             self.batch_size,
-            self.train_validation_ratio,
+            self.train_ratio,
             self.fraction_of_dataset,
             (self.train_loader, self.validation_loader, self.test_loader),
             self.cutoff,
