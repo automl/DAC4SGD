@@ -65,4 +65,4 @@ while not done:
     obs, reward, done, info = env.step(lr)
 ```
 
-For more policies see https://github.com/automl-private/DAC4SGD/blob/main/sgd_env/policy
+For more policies see https://github.com/automl-private/DAC4SGD/blob/main/examples/ac_for_dac/schedulers.py
