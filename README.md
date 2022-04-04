@@ -2,26 +2,17 @@
 
 DAC4SGD track of the DAC4AutoML competition at AutoML-Conf.
 
-## Requirements
-
-```
-numpy
-torch
-torchvision
-gym
-configspace
-```
 
 ## Installation
 
-```bash
-git clone https://github.com/automl-private/dac4automlcomp/
+```
+# If using SSH keys:
+git clone git@github.com:automl-private/dac4automlcomp.git
 cd dac4automlcomp
-python setup.py install --user
-cd ..
-git clone https://github.com/automl-private/DAC4SGD
+pip install -e .
+git clone git@github.com/automl-private/DAC4SGD.git
 cd DAC4SGD
-python setup.py install --user
+pip install -e .
 ```
 
 
