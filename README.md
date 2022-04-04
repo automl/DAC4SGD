@@ -87,3 +87,6 @@ docker run -it -u root raghuspacerajan/dac4automlpy39:latest bash
 ```
 
 It is not a requirement to use the Docker container to run your local evaluations, but it will be easier for us to debug any issues that may arise when you try evaluating submissions for the competition if you do so inside the provided Docker container.
+
+## Discussion Forum
+The discussion forum is hosted at: https://codalab.lisn.upsaclay.fr/forums/3672/
