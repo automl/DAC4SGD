@@ -13,7 +13,11 @@ setup(
     long_description_content_type="text/markdown",
     packages=["sgd_env",
               "sgd_env.envs"],
-    install_requires=["gym", "ConfigSpace", "numpy", "torch", "torchvision"],
+    install_requires=["gym",
+                      "ConfigSpace",
+                      "numpy",
+                      "torch",
+                      "torchvision"],
     classifiers=[
         "Programming Language :: Python :: 3",
         "License :: OSI Approved :: MIT License",
