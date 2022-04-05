@@ -78,7 +78,7 @@ bash evaluate_submission.sh -s ../DAC4SGD/examples/ac_for_dac/ -t dac4sgd -n 80
 NOTE: Please note that if you want to evaluate the experiments in the same runtime environment as the competition servers, you would additionally need to set up the docker container below.
 
 ## Docker Container
-To run your experiments in the same runtime environment as the competition servers they will be evaluated on, we provide a [Docker](https://docs.docker.com/engine/install/) container. Please see [the Docker container definition file](ubuntu_codalab_Dockerfile.txt) to see what packages will be available in the runtime environment.
+To run your experiments in the same runtime environment as the competition servers they will be evaluated on, we provide a [Docker](https://docs.docker.com/engine/install/) container. Please see [the Docker container definition file](https://github.com/automl/dac4automlcomp/blob/main/ubuntu_codalab_Dockerfile.txt) to see what packages will be available in the runtime environment.
 
 
 The Docker container may be run using the following command:
