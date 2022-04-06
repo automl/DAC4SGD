@@ -220,8 +220,12 @@ class HyperGradientPolicy(Configurable, Serializable, DeterministicPolicy, DACPo
     @staticmethod
     def config_space():
         cs = ConfigurationSpace()
-        cs.add_hyperparameter(
-            UniformFloatHyperparameter("lr", lower=0.000001, upper=10, log=True),
-            UniformFloatHyperparameter("hyper_lr", lower=0.000001, upper=10, log=True),
+        cs.add_hyperparameters(
+            [
+                UniformFloatHyperparameter("lr", lower=0.000001, upper=10, log=True),
+                UniformFloatHyperparameter(
+                    "hyper_lr", lower=0.000001, upper=10, log=True
+                ),
+            ]
         )
         return cs
