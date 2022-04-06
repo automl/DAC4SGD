@@ -200,12 +200,13 @@ class HyperGradientPolicy(Configurable, Serializable, DeterministicPolicy, DACPo
 
     def act(self, _):
         grad = self._parameters_to_grad_vector(self.model.parameters())
-        self.lr = self.lr + self.hyper_lr * (grad @ self.prev_grad)
+        self.lr_t = self.lr_t + self.hyper_lr * (grad @ self.prev_grad)
         self.prev_grad = grad
-        return self.lr
+        return self.lr_t
 
     def reset(self, instance):
         self.model = instance.model
+        self.lr_t = self.lr
         grad = self._parameters_to_grad_vector(self.model.parameters())
         self.prev_grad = torch.zeros_like(grad)
 
