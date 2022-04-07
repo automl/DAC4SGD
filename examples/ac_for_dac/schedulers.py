@@ -189,3 +189,43 @@ class ReduceLROnPlateauPolicy(
             ]
         )
         return cs
+
+
+@dataclasses.dataclass
+class HyperGradientPolicy(Configurable, Serializable, DeterministicPolicy, DACPolicy):
+    """ """
+
+    lr: float
+    hyper_lr: float
+
+    def act(self, _):
+        grad = self._parameters_to_grad_vector(self.model.parameters())
+        self.lr_t = self.lr_t + self.hyper_lr * (grad @ self.prev_grad)
+        self.prev_grad = grad
+        return self.lr_t
+
+    def reset(self, instance):
+        self.model = instance.model
+        self.lr_t = self.lr
+        grad = self._parameters_to_grad_vector(self.model.parameters())
+        self.prev_grad = torch.zeros_like(grad)
+
+    @staticmethod
+    def _parameters_to_grad_vector(parameters):
+        grads = []
+        for param in parameters:
+            grads.append(param.grad.flatten())
+        return torch.cat(grads)
+
+    @staticmethod
+    def config_space():
+        cs = ConfigurationSpace()
+        cs.add_hyperparameters(
+            [
+                UniformFloatHyperparameter("lr", lower=0.000001, upper=10, log=True),
+                UniformFloatHyperparameter(
+                    "hyper_lr", lower=0.000001, upper=10, log=True
+                ),
+            ]
+        )
+        return cs
