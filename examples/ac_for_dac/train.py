@@ -72,7 +72,7 @@ def evaluate_cost(cfg, seed, instance, **kwargs):
         obs, reward, done, _ = train_env.step(action)
         total_reward += reward
     return -(
-        train_env.current_instance.crash_penalty if obs["crashed"] else total_reward
+        -train_env.current_instance.crash_penalty if obs["crashed"] else total_reward
     )
 
 
